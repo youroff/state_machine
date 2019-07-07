@@ -23,4 +23,5 @@ erl_crash.dump
 state_machine-*.tar
 
 .elixir_ls
+.dist
 

@@ -7,6 +7,8 @@ defmodule StateMachine.MixProject do
     elixir: "~> 1.7",
     start_permanent: Mix.env() == :prod,
     elixirc_paths: elixirc_paths(Mix.env),
+    description: description(),
+    package: package(),
     deps: deps()
   ]
 
@@ -14,8 +16,21 @@ defmodule StateMachine.MixProject do
     # extra_applications: [:logger]
   ]
 
+  defp description do
+    """
+    State Machine implementation in Elixir. The goal is to make it easily convertible into gen_statem. At this point — it's still exprimental.
+    """
+  end
+
+  defp package, do: [
+   files: ["lib", "mix.exs", "README*", "LICENSE*"],
+   maintainers: ["Ivan Yurov"],
+   licenses: ["Apache 2.0"],
+   links: %{"GitHub" => "https://github.com/youroff/state_machine"}
+  ]
+
   defp deps, do: [
-    {:monex, "~> 0.1.13"},
+    {:monex, "~> 0.1"},
     {:dialyxir, "~> 0.5.1", runtime: false}
   ]
 
