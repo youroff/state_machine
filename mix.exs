@@ -31,7 +31,8 @@ defmodule StateMachine.MixProject do
 
   defp deps, do: [
     {:monex, "~> 0.1"},
-    {:dialyxir, "~> 0.5.1", runtime: false}
+    {:dialyxir, "~> 0.5.1", runtime: false},
+    {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

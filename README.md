@@ -9,7 +9,6 @@ Here's an example of simple state machine created with this package:
 ```elixir
 defmodule Cat do
   use StateMachine
-  import MonEx.Result
 
   defstruct [:name, :state, hungry: true]
 
@@ -44,7 +43,7 @@ defmodule Cat do
   end
 
   def feed_up(cat) do
-    ok(%{cat | hungry: false})
+    {:ok, %{cat | hungry: false}}
   end
 end
 ```
@@ -89,6 +88,11 @@ Callbacks are functions that can be called in various times during lifecycle. Th
 * after_enter(state)
 * after(transition)
 * after(event)
+
+Callbacks can be of arity 0, 1 or 2:
+* If arity is 0, the state of context is not updated. This is for side effects we don't really care about.
+* If arity is 1, first argument is a model, and updated model in {:ok, model} | {:error, e} has to be returned. It will be used to update model in context, or, in case of error, it will reject the transition and set the error status.
+* If arity is 2, then first argument is a mode, and second is a context. In this case you have to return context wrapped in {:ok, ...}
 
 *Important to notice that callbacks cannot be defined inline as lambdas, because lambdas won't survive macro expansion.*
 

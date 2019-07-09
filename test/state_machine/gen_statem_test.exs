@@ -1,22 +1,56 @@
 defmodule StateMachineGenStatemTest do
   use ExUnit.Case, async: true
+  import MonEx.Result
 
   defmodule TestMachine do
-    def start_link() do
-      :gen_statem.start_link(__MODULE__, nil, [])
+    use StateMachine
+
+    defstruct [:name, :state, hungry: true]
+
+    defmachine field: :state do
+      state :asleep
+      state :awake
+      state :playing
+      state :eating, after_enter: &TestMachine.feed_up/1
+
+      event :wake do
+        transition from: :asleep, to: :awake
+      end
+
+      event :give_a_mouse do
+        transition from: :awake, to: :playing, unless: &TestMachine.hungry/1
+        transition from: :awake, to: :eating, if: &TestMachine.hungry/1
+        transition from: :playing, to: :eating
+      end
+
+      event :pet do
+        transition from: [:eating, :awake], to: :playing
+      end
+
+      event :sing_a_lullaby do
+        transition from: :awake, to: :asleep
+        transition from: :playing, to: :asleep
+      end
     end
 
-    def init(model) do
-      {:ok, [], []}
+    define_gen_statem()
+
+    def hungry(cat) do
+      cat.hungry
     end
 
-    def callback_mode do
-      :state_functions
+    def feed_up(cat) do
+      {:ok, %{cat | hungry: false}}
     end
   end
 
-
   test "GenStatem behavior" do
-    TestMachine.start_link() |> IO.inspect
+    model = %TestMachine{state: :asleep, name: "Yo"}
+    ok(sm) = TestMachine.start_link(model)
+
+    TestMachine.trigger_call(sm, :wake)
+    |> IO.inspect
+    # :timer.sleep(500)
+    # IO.inspect(sm)
   end
 end

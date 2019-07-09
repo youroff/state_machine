@@ -30,4 +30,9 @@ defmodule StateMachine.Context do
       old_state: Map.get(model, sm.field) # figure out more general solution
     }
   end
+
+  @spec get_state(Context.t(any)) :: atom
+  def get_state(ctx) do
+    Map.get(ctx.model, ctx.definition.field)
+  end
 end

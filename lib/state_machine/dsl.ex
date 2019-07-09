@@ -137,4 +137,43 @@ defmodule StateMachine.DSL do
       end
     end
   end
+
+  # Experimental feture that generates gen_statem definition
+  # on top of state_machine
+  defmacro define_gen_statem do
+    quote do
+      def start_link(model) do
+        :gen_statem.start_link(__MODULE__, model, [])
+      end
+
+      def trigger_cast(sm_pid, event, payload \\ nil) do
+        :gen_statem.cast(sm_pid, {event, payload})
+      end
+
+      # TODO: opts?
+      def trigger_call(sm_pid, event, payload \\ nil) do
+        :gen_statem.call(sm_pid, {event, payload})
+      end
+
+      def init(model) do
+        sm = __state_machine__()
+        context = Context.build(sm, model)
+        {:ok, Map.get(model, sm.field), context}
+      end
+
+      def handle_event(kind, {event, payload}, state, context) do
+        new_context = Event.trigger(context, event, payload)
+        actions = case kind do
+          :cast -> []
+          {:call, from} -> [{:reply, from, new_context}]
+        end
+
+        {:next_state, Context.get_state(new_context), new_context, actions}
+      end
+
+      def callback_mode do
+        :handle_event_function
+      end
+    end
+  end
 end
