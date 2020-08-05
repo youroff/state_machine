@@ -16,6 +16,8 @@ defmodule StateMachine.DSL do
 
     out =
       quote unquote: false do
+        @state_names Enum.map(@states, & &1.name) |> Enum.reverse()
+
         states = @states |> Enum.reverse |> Enum.reduce(%{}, fn state, acc ->
           Map.put(acc, state.name, state)
         end)
@@ -163,9 +165,10 @@ defmodule StateMachine.DSL do
 
       def handle_event(kind, {event, payload}, state, context) do
         new_context = Event.trigger(context, event, payload)
-        actions = case kind do
-          :cast -> []
-          {:call, from} -> [{:reply, from, new_context}]
+        actions = case {kind, new_context.status} do
+          {:cast, _} -> []
+          {{:call, from}, :done} -> [{:reply, from, ok(new_context.model)}]
+          {{:call, from}, status} -> [{:reply, from, error({status, new_context.message})}]
         end
 
         {:next_state, Context.get_state(new_context), new_context, actions}

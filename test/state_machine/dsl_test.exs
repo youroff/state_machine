@@ -2,6 +2,8 @@ defmodule StateMachineDSLTest do
   use ExUnit.Case, async: true
   doctest StateMachine
 
+  @compile {:no_warn_undefined, Cat}
+
   test "life-like statemachine compilation" do
     Code.compile_string """
       defmodule Cat do

@@ -31,6 +31,7 @@ defmodule StateMachine.MixProject do
 
   defp deps, do: [
     {:monex, "~> 0.1"},
+    {:ecto, "~> 3.0", optional: true},
     {:dialyxir, "~> 0.5.1", runtime: false},
     {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]

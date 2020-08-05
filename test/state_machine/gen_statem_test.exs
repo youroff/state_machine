@@ -45,11 +45,11 @@ defmodule StateMachineGenStatemTest do
   end
 
   test "GenStatem behavior" do
-    model = %TestMachine{state: :asleep, name: "Yo"}
+    model = %TestMachine{state: :playing, name: "Yo"}
     ok(sm) = TestMachine.start_link(model)
 
-    TestMachine.trigger_call(sm, :wake)
-    |> IO.inspect
+    TestMachine.trigger_call(sm, :give_a_mouse)
+    # |> IO.inspect
     # :timer.sleep(500)
     # IO.inspect(sm)
   end
