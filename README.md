@@ -1,6 +1,6 @@
 # StateMachine
 
-*This is work in progress*
+[![Build Status](https://travis-ci.org/youroff/state_machine.svg?branch=master)](https://travis-ci.org/youroff/state_machine)
 
 The goal of this work is to simplify building finite state machines in Elixir. Formal definition of finite state machines can be found on [Wikipedia](https://en.wikipedia.org/wiki/Finite-state_machine).
 
