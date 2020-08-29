@@ -1,6 +1,5 @@
 defmodule StateMachineGenStatemTest do
   use ExUnit.Case, async: true
-  import MonEx.Result
 
   defmodule TestMachine do
     use StateMachine
@@ -46,7 +45,7 @@ defmodule StateMachineGenStatemTest do
 
   test "GenStatem behavior" do
     model = %TestMachine{state: :playing, name: "Yo"}
-    ok(sm) = TestMachine.start_link(model)
+    {:ok, sm} = TestMachine.start_link(model)
 
     assert {:ok, machine} = TestMachine.trigger_call(sm, :give_a_mouse)
     assert machine.state == :eating

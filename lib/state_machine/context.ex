@@ -1,9 +1,16 @@
 defmodule StateMachine.Context do
+  @moduledoc """
+  Context is a container for all metadata supporting the transition.
+  Normally users should not have anything to do with Context,
+  but there are some public functions that would expose it.
+  For example, user can manipulate Context in callbacks.
+  """
+
   @type t(model) :: %__MODULE__{
     definition: StateMachine.t(model),
     model: model,
-    status: :init | :impossible | :rejected | :failed | :done,
-    message: any,
+    status: :init | :failed | :done,
+    error: any,
     event: atom,
     old_state: atom,
     new_state: atom,
@@ -15,7 +22,7 @@ defmodule StateMachine.Context do
     :definition,
     :model,
     {:status, :init},
-    :message,
+    :error,
     :event,
     :old_state,
     :new_state,
@@ -23,11 +30,11 @@ defmodule StateMachine.Context do
   ]
 
   @spec build(StateMachine.t(model), model) :: t(model) when model: var
-  def build(sm, model) do
-    %__MODULE__{
-      definition: sm,
-      model: model,
-      old_state: Map.get(model, sm.field) # figure out more general solution
+  def build(definition, model) do
+    ctx = %__MODULE__{
+      definition: definition,
+      model: model
     }
+    %{ctx | old_state: ctx.definition.state_getter.(ctx)}
   end
 end

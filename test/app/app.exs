@@ -11,15 +11,15 @@ defmodule TestApp.CatMachine do
     state :asleep
     state :awake
     state :playing
-    state :eating, after_enter: &Cat.feed_up/1
+    state :eating, after_enter: &__MODULE__.feed_up/1
 
     event :wake do
       transition from: :asleep, to: :awake
     end
 
     event :give_a_mouse do
-      transition from: :awake, to: :playing, unless: &Cat.hungry/1
-      transition from: :awake, to: :eating, if: &Cat.hungry/1
+      transition from: :awake, to: :playing, unless: &__MODULE__.hungry/1
+      transition from: :awake, to: :eating, if: &__MODULE__.hungry/1
       transition from: :playing, to: :eating
     end
 
@@ -32,7 +32,6 @@ defmodule TestApp.CatMachine do
       transition from: :playing, to: :asleep
     end
   end
-  define_ecto_type(StateType)
 
   def hungry(cat) do
     cat.hungry

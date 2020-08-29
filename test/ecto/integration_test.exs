@@ -6,11 +6,9 @@ defmodule StateMachine.Ecto.IntegrationTest do
   test "playing with cats" do
     {:ok, tom} = %Cat{name: "Tom", state: :asleep} |> Repo.insert()
 
-    {:ok, tom_awake} = CatMachine.trigger_result(tom, :wake)
+    {:ok, tom_awake} = CatMachine.trigger(tom, :wake)
     tom = Repo.get!(Cat, tom_awake.id)
 
     assert tom.state == :awake
-
-    # |> IO.inspect()
   end
 end

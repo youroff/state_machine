@@ -1,6 +1,6 @@
 defmodule StateMachine.DSL do
   alias StateMachine
-  alias StateMachine.{State, Event, Transition, Context, Guard, Introspection, Ecto}
+  alias StateMachine.{State, Event, Transition, Context, Guard, Introspection}
   import StateMachine.Utils, only: [keyword_splat: 2]
 
   defmacro defmachine(opts \\ [], block) do
@@ -12,12 +12,13 @@ defmodule StateMachine.DSL do
         Module.put_attribute(__MODULE__, :in_defmachine, true)
         Module.put_attribute(__MODULE__, :field, Keyword.get(unquote(opts), :field, :state))
         Module.put_attribute(__MODULE__, :repo, Keyword.get(unquote(opts), :repo))
+        Module.put_attribute(__MODULE__, :ecto_type, Keyword.get(unquote(opts), :ecto_type, StateType))
         unquote(block)
       end
 
     out =
       quote unquote: false do
-        @state_names Enum.map(@states, & &1.name) |> Enum.reverse()
+        Module.put_attribute(__MODULE__, :state_names, Enum.map(@states, & &1.name))
 
         states = @states |> Enum.reverse |> Enum.reduce(%{}, fn state, acc ->
           Map.put(acc, state.name, state)
@@ -29,8 +30,8 @@ defmodule StateMachine.DSL do
 
         field = @field
 
-        getter = if @repo, do: &Ecto.get/1, else: &State.get/1
-        setter = if @repo, do: &Ecto.set/2, else: &State.set/2
+        getter = if @repo, do: &StateMachine.Ecto.get/1, else: &State.get/1
+        setter = if @repo, do: &StateMachine.Ecto.set/2, else: &State.set/2
 
         misc = if @repo, do: [repo: @repo], else: []
 
@@ -50,13 +51,17 @@ defmodule StateMachine.DSL do
 
         introspection_functions()
         if @repo do
+          require StateMachine.Ecto
+          StateMachine.Ecto.define_ecto_type()
+
           ecto_action_functions()
         else
           action_functions()
         end
-        result_functions()
 
         Module.delete_attribute(__MODULE__, :repo)
+        Module.delete_attribute(__MODULE__, :ecto_type)
+        Module.delete_attribute(__MODULE__, :state_names)
       end
 
     quote do
@@ -149,14 +154,21 @@ defmodule StateMachine.DSL do
         Context.build(__state_machine__(), model)
         |> Introspection.allowed_events()
       end
+
+      def trigger_with_context(model, event, payload \\ nil) do
+        Context.build(__state_machine__(), model)
+        |> Event.trigger(event, payload)
+      end
     end
   end
 
   defmacro action_functions do
     quote do
       def trigger(model, event, payload \\ nil) do
-        Context.build(__state_machine__(), model)
-        |> Event.trigger(event, payload)
+        case trigger_with_context(model, event, payload) do
+          %{status: :done, model: model} -> {:ok, model}
+          %{error: m} -> {:error, m}
+        end
       end
     end
   end
@@ -164,26 +176,12 @@ defmodule StateMachine.DSL do
   defmacro ecto_action_functions do
     quote do
       def trigger(model, event, payload \\ nil) do
-        ctx = Context.build(__state_machine__(), model)
-        ctx.definition.misc[:repo].transaction(fn ->
-          case Event.trigger(ctx, event, payload) do
-            %{status: :done} = ctx ->
-              ctx
-            ctx ->
-              ctx.definition.misc[:repo].rollback(ctx)
+        repo = __state_machine__().misc[:repo]
+        repo.transaction fn ->
+          case trigger_with_context(model, event, payload) do
+            %{status: :done, model: model} -> model
+            %{error: m} -> repo.rollback(m)
           end
-        end)
-        |> MonEx.Result.unwrap(& &1)
-      end
-    end
-  end
-
-  defmacro result_functions do
-    quote do
-      def trigger_result(model, event, payload \\ nil) do
-        case trigger(model, event, payload) do
-          %{status: :done, model: model} -> {:ok, model}
-          %{message: m} -> {:error, m}
         end
       end
     end
@@ -216,8 +214,8 @@ defmodule StateMachine.DSL do
         new_context = Event.trigger(context, event, payload)
         actions = case {kind, new_context.status} do
           {:cast, _} -> []
-          {{:call, from}, :done} -> [{:reply, from, ok(new_context.model)}]
-          {{:call, from}, status} -> [{:reply, from, error({status, new_context.message})}]
+          {{:call, from}, :done} -> [{:reply, from, {:ok, new_context.model}}]
+          {{:call, from}, status} -> [{:reply, from, {:error, {status, new_context.message}}}]
         end
 
         next_state = new_context.definition.state_getter.(new_context)

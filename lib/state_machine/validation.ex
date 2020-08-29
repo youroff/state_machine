@@ -1,6 +1,13 @@
 defmodule StateMachine.Validation do
+  @moduledoc """
+  StateMachine supports automatic validation on compile time.
+  It makes its best effort to ensure determinism (to some degree).
+  It checks that all used states were previously defined.
+
+  TODO: Check unreachable states?
+  """
+
   alias StateMachine.Introspection
-  import MonEx.Result
 
   def __after_compile__(env, _) do
     with errors when errors != [] <- validate_all(apply(env.module, :__state_machine__, [])) do
@@ -9,13 +16,16 @@ defmodule StateMachine.Validation do
   end
 
   def validate_all(sm) do
-    collect_error([
+    for {:error, e} <- [
       validate_states_in_transitions(sm),
       validate_transitions_determinism(sm)
-    ])
+    ], do: e
     |> List.flatten()
   end
 
+  @doc """
+  Validates presense of states used in transitions.
+  """
   def validate_states_in_transitions(sm) do
     states = Introspection.all_states(sm)
     errors = Enum.reduce(sm.events, [], fn {event_name, event}, acc1 ->
@@ -33,12 +43,15 @@ defmodule StateMachine.Validation do
     end)
 
     if Enum.empty? errors do
-      ok(sm)
+      {:ok, sm}
     else
-      error(Enum.reverse(errors))
+      {:error, Enum.reverse(errors)}
     end
   end
 
+  @doc """
+  Validates that no more than one unguarded transition is originated in every state.
+  """
   def validate_transitions_determinism(sm) do
     errors = Enum.reduce(sm.events, [], fn {event_name, event}, acc1 ->
       Enum.reduce(event.transitions, {[], acc1}, fn transition, {ts, acc2} ->
@@ -54,9 +67,9 @@ defmodule StateMachine.Validation do
     end)
 
     if Enum.empty? errors do
-      ok(sm)
+      {:ok, sm}
     else
-      error(Enum.reverse(errors))
+      {:error, Enum.reverse(errors)}
     end
   end
 end

@@ -60,7 +60,6 @@ defmodule StateMachine do
   defmacro __using__(_) do
     quote do
       import StateMachine.DSL
-      import StateMachine.Ecto
       alias StateMachine.Introspection
 
       @after_compile StateMachine

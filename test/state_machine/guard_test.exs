@@ -1,8 +1,6 @@
 defmodule StateMachineGuardTest do
   use ExUnit.Case, async: true
   alias StateMachine.{Event, Guard, Context}
-  # import StateMachine.Factory
-  # import MonEx.Option
 
   test "prepare" do
     [one, two, three] = Guard.prepare(if: &guard_one/2, unless: [&__MODULE__.guard_two/1, &guard_three/0])

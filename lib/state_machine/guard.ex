@@ -1,9 +1,10 @@
 defmodule StateMachine.Guard do
-  @moduledoc ~S"""
-  Guards are functions bound to Events and Transitions that help to decide
-  whether it's allowed to proceed. They might serve different purposes:
-  * Protecting state maching from getting into some state unless some criteria met
-  * Creating event with multiple target states
+  @moduledoc """
+  Guards are functions that help to decide whether it's allowed to proceed with Event
+  or Transition. They might serve different purposes:
+
+  * Preventing a state machine from getting into a state unless some criteria met
+  * Creating event with multiple target states with a single source state
 
   Guards should not have any side-effects, cause they are getting run no matter
   if transition is successful or not, and also to determine the list of possible events
@@ -21,6 +22,9 @@ defmodule StateMachine.Guard do
   @enforce_keys [:fun, :arity]
   defstruct [:fun, :arity, inverted: false]
 
+  @doc """
+  Unifies `if` and `unless` guards into a single stream of guards.
+  """
   @spec prepare(keyword()) :: list(t(any))
   def prepare(opts) do
     ifs = keyword_splat(opts, :if)
@@ -34,21 +38,13 @@ defmodule StateMachine.Guard do
 
   @doc """
   Check runs guards associated with given Event or Transition
-  and returns true if all passed, guard returning. Second argument
-  is the context, that gets passed on to each guard.
-
+  and returns true if all passed. First argument of the guard is a model,
+  second argument is the context.
   """
   @spec check(Context.t(m), Event.t(m) | Transition.t(m)) :: boolean when m: var
   def check(ctx, %{guards: guards}) do
-    Enum.reduce_while(guards, true, fn guard, _ -> check_guard(ctx, guard) end)
-  end
-
-  @spec check_guard(Context.t(m), t(m)) :: {:cont, boolean} | {:halt, boolean} when m: var
-  defp check_guard(ctx, %Guard{inverted: inv, fun: f, arity: n}) do
-    if inv == !!apply(f, Enum.take([ctx.model, ctx], n)) do
-      {:halt, false}
-    else
-      {:cont, true}
-    end
+    Enum.all?(guards, fn guard ->
+      guard.inverted == !apply(guard.fun, Enum.take([ctx.model, ctx], guard.arity))
+    end)
   end
 end

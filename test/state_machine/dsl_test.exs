@@ -8,7 +8,6 @@ defmodule StateMachineDSLTest do
     Code.compile_string """
       defmodule Cat do
         use StateMachine
-        import MonEx.Result
 
         defstruct [:name, :custom, hungry: true]
 
@@ -43,13 +42,13 @@ defmodule StateMachineDSLTest do
         end
 
         def feed_up(cat) do
-          ok(%{cat | hungry: false})
+          {:ok, %{cat | hungry: false}}
         end
       end
     """
     cat = struct(Cat, %{name: "Bobik", custom: :asleep})
     assert :wake in Cat.allowed_events(cat)
-    wake_ctx = Cat.trigger(cat, :wake)
+    wake_ctx = Cat.trigger_with_context(cat, :wake)
     assert wake_ctx.status == :done
     assert wake_ctx.old_state == :asleep
     assert wake_ctx.new_state == :awake
@@ -58,7 +57,7 @@ defmodule StateMachineDSLTest do
 
     assert :give_a_mouse in Cat.allowed_events(wake_ctx.model)
     assert :sing_a_lullaby in Cat.allowed_events(wake_ctx.model)
-    eating_ctx = Cat.trigger(wake_ctx.model, :give_a_mouse)
+    eating_ctx = Cat.trigger_with_context(wake_ctx.model, :give_a_mouse)
     assert eating_ctx.status == :done
     assert eating_ctx.old_state == :awake
     assert eating_ctx.new_state == :eating
@@ -66,7 +65,7 @@ defmodule StateMachineDSLTest do
     refute eating_ctx.model.hungry
 
     assert :pet in Cat.allowed_events(eating_ctx.model)
-    playing_ctx = Cat.trigger(eating_ctx.model, :pet, "Some payload")
+    playing_ctx = Cat.trigger_with_context(eating_ctx.model, :pet, "Some payload")
     assert playing_ctx.status == :done
     assert playing_ctx.old_state == :eating
     assert playing_ctx.new_state == :playing
