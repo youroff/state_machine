@@ -1,6 +1,9 @@
 defmodule StateMachine.State do
   alias StateMachine.{Context, Callback}
 
+  @callback get(ctx :: Context.t(any)) :: atom()
+  @callback set(ctx :: Context.t(model), state :: atom) :: Context.t(model) when model: var
+
   @type t(model) :: %__MODULE__{
     name:  atom,
     before_enter: list(Callback.t(model)),
@@ -36,5 +39,13 @@ defmodule StateMachine.State do
   @spec after_enter(Context.t(model)) :: Context.t(model) when model: var
   def after_enter(ctx) do
     Callback.apply_chain(ctx, ctx.definition.states[ctx.new_state].after_enter)
+  end
+
+  def get(ctx) do
+    Map.get(ctx.model, ctx.definition.field)
+  end
+
+  def set(ctx, state) do
+    %{ctx | model: Map.put(ctx.model, ctx.definition.field, state)}
   end
 end

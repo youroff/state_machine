@@ -39,15 +39,23 @@ defmodule StateMachine do
   - after(transition)
   - after(event)
   """
-  alias StateMachine.{State, Event}
+  alias StateMachine.{State, Event, Context}
 
   @type t(m) :: %__MODULE__{
     states: %{optional(atom) => State.t(m)},
     events: %{optional(atom) => Event.t(m)},
-    field:  atom
+    field:  atom(),
+    state_getter: (Context.t(m) -> atom()),
+    state_setter: (Context.t(m), atom() -> Context.t(m)),
+    misc: keyword()
   }
 
-  defstruct states: %{}, events: %{}, field: :state
+  defstruct states: %{},
+    events: %{},
+    field: :state,
+    state_getter: &State.get/1,
+    state_setter: &State.set/2,
+    misc: []
 
   defmacro __using__(_) do
     quote do

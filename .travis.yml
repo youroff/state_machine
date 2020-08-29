@@ -1,0 +1,14 @@
+language: elixir
+
+elixir:
+  - 1.10
+otp_release: 22.3
+
+services:
+  - postgresql
+  
+before_script:
+  - psql -c 'create database state_machine_test;' -U postgres
+
+script:
+  - mix test

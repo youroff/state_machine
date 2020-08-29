@@ -52,12 +52,22 @@ defmodule StateMachine.Ecto do
     end
   end
 
-  # Callbacks
-  def get_state() do
+  @behaviour StateMachine.State
 
+  @impl true
+  def get(ctx) do
+    Map.get(ctx.model, ctx.definition.field)
   end
 
-  def set_state() do
-
+  @impl true
+  def set(ctx, state) do
+    Ecto.Changeset.change(ctx.model, [{ctx.definition.field, state}])
+    |> ctx.definition.misc[:repo].update()
+    |> case do
+      {:ok, model} ->
+        %{ctx | model: model}
+      {:error, e} ->
+        %{ctx | status: :failed, message: e}
+    end
   end
 end

@@ -50,7 +50,7 @@ defmodule StateMachine.Transition do
 
   @spec update_state(Context.t(model)) :: Context.t(model) when model: var
   def update_state(%{status: :init} = ctx) do
-    %{ctx | model: Map.put(ctx.model, ctx.definition.field, ctx.new_state)}
+    ctx.definition.state_setter.(ctx, ctx.new_state)
   end
 
   def update_state(ctx), do: ctx

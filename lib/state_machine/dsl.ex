@@ -1,6 +1,6 @@
 defmodule StateMachine.DSL do
   alias StateMachine
-  alias StateMachine.{State, Event, Transition, Context, Guard, Introspection}
+  alias StateMachine.{State, Event, Transition, Context, Guard, Introspection, Ecto}
   import StateMachine.Utils, only: [keyword_splat: 2]
 
   defmacro defmachine(opts \\ [], block) do
@@ -11,6 +11,7 @@ defmodule StateMachine.DSL do
         Module.register_attribute(__MODULE__, :events, accumulate: true)
         Module.put_attribute(__MODULE__, :in_defmachine, true)
         Module.put_attribute(__MODULE__, :field, Keyword.get(unquote(opts), :field, :state))
+        Module.put_attribute(__MODULE__, :repo, Keyword.get(unquote(opts), :repo))
         unquote(block)
       end
 
@@ -28,6 +29,11 @@ defmodule StateMachine.DSL do
 
         field = @field
 
+        getter = if @repo, do: &Ecto.get/1, else: &State.get/1
+        setter = if @repo, do: &Ecto.set/2, else: &State.set/2
+
+        misc = if @repo, do: [repo: @repo], else: []
+
         Module.delete_attribute(__MODULE__, :states)
         Module.delete_attribute(__MODULE__, :events)
         Module.delete_attribute(__MODULE__, :field)
@@ -36,10 +42,21 @@ defmodule StateMachine.DSL do
         def __state_machine__, do: %StateMachine{
           field: unquote(field),
           states: unquote(Macro.escape(states)),
-          events: unquote(Macro.escape(events))
+          events: unquote(Macro.escape(events)),
+          state_getter: unquote(Macro.escape(getter)),
+          state_setter: unquote(Macro.escape(setter)),
+          misc: unquote(Macro.escape(misc))
         }
 
-        aux_functions()
+        introspection_functions()
+        if @repo do
+          ecto_action_functions()
+        else
+          action_functions()
+        end
+        result_functions()
+
+        Module.delete_attribute(__MODULE__, :repo)
       end
 
     quote do
@@ -118,7 +135,7 @@ defmodule StateMachine.DSL do
     end
   end
 
-  defmacro aux_functions do
+  defmacro introspection_functions do
     quote do
       def all_states do
         Introspection.all_states(__state_machine__())
@@ -132,10 +149,42 @@ defmodule StateMachine.DSL do
         Context.build(__state_machine__(), model)
         |> Introspection.allowed_events()
       end
+    end
+  end
 
+  defmacro action_functions do
+    quote do
       def trigger(model, event, payload \\ nil) do
         Context.build(__state_machine__(), model)
         |> Event.trigger(event, payload)
+      end
+    end
+  end
+
+  defmacro ecto_action_functions do
+    quote do
+      def trigger(model, event, payload \\ nil) do
+        ctx = Context.build(__state_machine__(), model)
+        ctx.definition.misc[:repo].transaction(fn ->
+          case Event.trigger(ctx, event, payload) do
+            %{status: :done} = ctx ->
+              ctx
+            ctx ->
+              ctx.definition.misc[:repo].rollback(ctx)
+          end
+        end)
+        |> MonEx.Result.unwrap(& &1)
+      end
+    end
+  end
+
+  defmacro result_functions do
+    quote do
+      def trigger_result(model, event, payload \\ nil) do
+        case trigger(model, event, payload) do
+          %{status: :done, model: model} -> {:ok, model}
+          %{message: m} -> {:error, m}
+        end
       end
     end
   end
@@ -160,7 +209,7 @@ defmodule StateMachine.DSL do
       def init(model) do
         sm = __state_machine__()
         context = Context.build(sm, model)
-        {:ok, Map.get(model, sm.field), context}
+        {:ok, context.definition.state_getter.(context), context}
       end
 
       def handle_event(kind, {event, payload}, state, context) do
@@ -171,7 +220,8 @@ defmodule StateMachine.DSL do
           {{:call, from}, status} -> [{:reply, from, error({status, new_context.message})}]
         end
 
-        {:next_state, Context.get_state(new_context), new_context, actions}
+        next_state = new_context.definition.state_getter.(new_context)
+        {:next_state, next_state, new_context, actions}
       end
 
       def callback_mode do

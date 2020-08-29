@@ -48,9 +48,7 @@ defmodule StateMachineGenStatemTest do
     model = %TestMachine{state: :playing, name: "Yo"}
     ok(sm) = TestMachine.start_link(model)
 
-    TestMachine.trigger_call(sm, :give_a_mouse)
-    # |> IO.inspect
-    # :timer.sleep(500)
-    # IO.inspect(sm)
+    assert {:ok, machine} = TestMachine.trigger_call(sm, :give_a_mouse)
+    assert machine.state == :eating
   end
 end
