@@ -33,7 +33,6 @@ defmodule StateMachine.MixProject do
   ]
 
   defp deps, do: [
-    {:monex, "~> 0.1"},
     {:ecto, "~> 3.0", optional: true},
     {:ecto_sql, "~> 3.0", optional: true},
     {:postgrex, ">= 0.0.0", optional: true},

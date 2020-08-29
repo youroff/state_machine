@@ -1,9 +1,10 @@
 defmodule StateMachine.Ecto do
   @moduledoc """
-  This addition makes StateMachine fully compatible with Ecto. We abstract state setter and getter,
-  in order to provide a way to update a state in the middle of transition. If the state machine uses structure,
-  it is a simple `Map.put`, this is a default implementation. With Ecto, we call `change() |> Repo.update`.
-  We also wrap every event in transaction, which is rolled back if transition failed to finish.
+  This addition makes StateMachine fully compatible with Ecto.
+
+  State setter and getter are abstracted in order to provide a way to update a state
+  in the middle of transition for a various types of models. With Ecto, we call `change() |> Repo.update`.
+  We also wrap every event in transaction, which is rolled back if transition fails to finish.
   This unlocks a lot of beautiful effects. For example, you can enqueue some tasks into db-powered queue in callbacks,
   and if transition failes, those tasks will naturally disappear.
 
@@ -11,20 +12,20 @@ defmodule StateMachine.Ecto do
   To use Ecto, simply pass `repo` param to `defmachine`, you can optionally pass a name of the `Ecto.Type`
   implementation, that will be generated automatically under state machine namespace:
 
-    defmodule EctoMachine do
-      use StateMachine
 
-      defmachine field: :state, repo: TestApp.Repo, ecto_type: CustomMod do
-        state :resting
-        state :working
+      defmodule EctoMachine do
+        use StateMachine
 
-        # ...
+        defmachine field: :state, repo: TestApp.Repo, ecto_type: CustomMod do
+          state :resting
+          state :working
+
+          # ...
+        end
       end
-    end
 
   In your schema you can refer to state type as `EctoMachine.CustomMod`, with `ecto_type` omitted
   it would generate `EctoMachine.StateType`. This custom type is needed to transparently use atoms as states.
-
   """
 
   @doc """

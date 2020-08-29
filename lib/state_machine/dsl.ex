@@ -1,8 +1,29 @@
 defmodule StateMachine.DSL do
-  alias StateMachine
+  @moduledoc """
+  These macros help generating State Machine definition in a given Module.
+  """
+
   alias StateMachine.{State, Event, Transition, Context, Guard, Introspection}
   import StateMachine.Utils, only: [keyword_splat: 2]
 
+  @doc """
+  Creates a main block for a State Machine definition. Compile time checks and validators help
+  ensuring correct usage of this and other macros.
+
+      use StateMachine
+
+      defmachine field: :custom do
+        # ... states, events, transitions
+      end
+
+  ## Options
+    * `:field` - what field in the model structure holds the state value. Default: `:state`.
+    * `:repo` - the Ecto Repo module. If provider, the support for Ecto is activated, including
+      state getter/setters, Ecto.Type generation and custom `trigger` function.
+    * `:ecto_type` - name for `Ecto.Type` module. Generated inside of the module namespace.
+      If you state maching is `App.StateMachine`, then `Ecto.Type` implementation will be
+      accessible on `App.StateMachine.(ecto_type)`. Default: `StateType`.
+  """
   defmacro defmachine(opts \\ [], block) do
     head =
       quote do
@@ -70,6 +91,23 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc """
+  Creates a State record with any atom as a name.
+  Supports defining callbacks for before/after leaving/entering given state.
+  For detailed description of Callbacks, see the module documentation,
+  but currently only fully qualified function capture is supported: `&Module.fun/arity`
+
+      defmachine do
+        state :sleeping, after_leave: &Kitchen.brew_coffee/1
+        state :working, before_enter: [&Commute.drive/1, &Commute.grab_a_newspaper/1]
+      end
+
+  ## Options
+    * `:before_leave` - run the callback before leaving this state.
+    * `:after_leave` - run the callback after leaving this state.
+    * `:before_enter` - run the callback before entering this state.
+    * `:after_enter` - run the callback after entering this state.
+  """
   defmacro state(name, opts \\ []) when is_atom(name) do
     quote do
       unless Module.get_attribute(__MODULE__, :in_defmachine) do
@@ -85,6 +123,31 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc """
+  Creates an Event record which encapsulates one or more Transitions.
+  Conceptually an Event is an external signal to change the state.
+  Events can be accompanied by Guards — additional conditions, allowing
+  for implementing more complex logic than supported by theoretical
+  state machines.
+
+  Using guards allow for transitions from one to the multiple states,
+  based on condition.
+
+
+      defmachine do
+        # for state defs, see `state`
+
+        event :wake_up, if: &Bedroom.slept_eight_hours?/1 do
+          # for transition defs, see `transition`
+        end
+      end
+
+  ## Options
+    * `:before` - run the callback before the event.
+    * `:after` - run the callback after the event.
+    * `:if` - positive guard, must return `true` to proceed.
+    * `:unless` - negative guard, must return `false` to proceed.
+  """
   defmacro event(name, opts \\ [], block) when is_atom(name) do
     head =
       quote do
@@ -122,6 +185,30 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc """
+  Defines a Transition, a path from one or more states to a single state.
+  The same Event can contain all crazy combinations of transitions,
+  but the resolution happens from top to bottom, from left to right.
+  First matching transition will run.
+
+
+      defmachine do
+        # for state defs, see `state`
+
+        event :wake_up do
+          transition from: :sleeping, to: :sleeping,
+            if: &Calendar.weekend?/0,
+            unless: &Bedroom.slept_ten_hours?/1
+          transition from: :sleeping, to: :awake
+        end
+      end
+
+  ## Options
+    * `:before` - run the callback before the transition.
+    * `:after` - run the callback after the transition.
+    * `:if` - positive guard, must return `true` to proceed.
+    * `:unless` - negative guard, must return `false` to proceed.
+  """
   defmacro transition(opts) do
     quote do
       unless Module.get_attribute(__MODULE__, :in_event) do
@@ -140,6 +227,7 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc false
   defmacro introspection_functions do
     quote do
       def all_states do
@@ -162,6 +250,7 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc false
   defmacro action_functions do
     quote do
       def trigger(model, event, payload \\ nil) do
@@ -173,6 +262,7 @@ defmodule StateMachine.DSL do
     end
   end
 
+  @doc false
   defmacro ecto_action_functions do
     quote do
       def trigger(model, event, payload \\ nil) do
@@ -187,8 +277,9 @@ defmodule StateMachine.DSL do
     end
   end
 
-  # Experimental feture that generates gen_statem definition
-  # on top of state_machine
+  @doc """
+  Experimental macro to generate GenStatem definition. See source...
+  """
   defmacro define_gen_statem do
     quote do
       def start_link(model) do

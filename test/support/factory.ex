@@ -25,10 +25,6 @@ defmodule StateMachine.Factory do
     }
   end
 
-  # [:asleep, :awake, :playing, :eating]
-
-  # [:wake, :give_a_mouse, :sing_lullaby]
-
   def state_asleep do
     %State{
       name: :asleep

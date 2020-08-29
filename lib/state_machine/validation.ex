@@ -23,6 +23,9 @@ defmodule StateMachine.Validation do
     |> List.flatten()
   end
 
+  # TODO: State uniqueness
+  # TODO: Empty events
+
   @doc """
   Validates presense of states used in transitions.
   """
