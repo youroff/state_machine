@@ -14,11 +14,16 @@ defmodule StateMachineDSLTest do
         defmachine field: :custom do
           state :asleep
           state :awake
+          state :angry
           state :playing
           state :eating, after_enter: &Cat.feed_up/1
 
           event :wake do
             transition from: :asleep, to: :awake
+          end
+
+          event :wash do
+            transition from: :awake, to: :angry, after: &Cat.wash/0
           end
 
           event :give_a_mouse do
@@ -43,6 +48,10 @@ defmodule StateMachineDSLTest do
 
         def feed_up(cat) do
           {:ok, %{cat | hungry: false}}
+        end
+
+        def wash do
+          {:error, "Your cat is broken now"}
         end
       end
     """
@@ -71,6 +80,12 @@ defmodule StateMachineDSLTest do
     assert playing_ctx.new_state == :playing
     assert playing_ctx.model.custom == :playing
     assert playing_ctx.payload == "Some payload"
+
+    assert {:error, {:event, "Couldn't resolve event"}} = Cat.trigger(cat, :something)
+    assert {:error, {:transition, "Couldn't resolve transition"}} = Cat.trigger(cat, :pet)
+
+    assert {:ok, awake_cat} = Cat.trigger(cat, :wake)
+    assert {:error, {:after_transition, "Your cat is broken now"}} = Cat.trigger(awake_cat, :wash)
 
     assert :give_a_mouse in Cat.allowed_events(playing_ctx.model)
     assert :sing_a_lullaby in Cat.allowed_events(playing_ctx.model)

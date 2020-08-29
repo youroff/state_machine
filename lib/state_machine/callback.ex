@@ -33,7 +33,7 @@ defmodule StateMachine.Callback do
       {:ok, %{__struct__: ^strct} = model} ->
         %{ctx | model: model}
       {:error, e} ->
-        %{ctx | status: :failed, message: {step, e}}
+        %{ctx | status: :failed, error: {step, e}}
       _ ->
         ctx
     end

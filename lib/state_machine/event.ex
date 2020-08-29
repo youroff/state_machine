@@ -7,7 +7,7 @@ defmodule StateMachine.Event do
   from the same state, but it doesn't guarantee anything: if guards always return true, we're back to where we were before.
   """
 
-  alias StateMachine.{Transition, Context, Callback, Guard}
+  alias StateMachine.{Event, Transition, Context, Callback, Guard}
 
   @type t(model) :: %__MODULE__{
     name:         atom,
@@ -44,10 +44,10 @@ defmodule StateMachine.Event do
   @spec trigger(Context.t(model), atom, any) :: Context.t(model) when model: var
   def trigger(ctx, event, payload \\ nil) do
     context = %{ctx | payload: payload, event: event}
-    with {_, event} <- {:event, Map.get(context.definition.events, event)},
-      {_, transition} <- {:transition, find_transition(context, event)}
+    with {_, %Event{} = e} <- {:event, Map.get(context.definition.events, event)},
+      {_, %Transition{} = t} <- {:transition, find_transition(context, e)}
     do
-      Transition.run(context, transition)
+      Transition.run(context, t)
     else
       {item, _} -> %{context | status: :failed, error: {item, "Couldn't resolve #{item}"}}
     end
