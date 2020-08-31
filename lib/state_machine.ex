@@ -8,7 +8,6 @@ defmodule StateMachine do
 
   Here's an example of a simple state machine created with this package:
 
-      ```elixir
       defmodule Cat do
         use StateMachine
 
@@ -48,15 +47,12 @@ defmodule StateMachine do
           {:ok, %{cat | hungry: false}}
         end
       end
-      ```
 
   And later use it like this:
 
-      ```elixir
       cat = %Cat{name: "Thomas", state: :asleep}
 
       {:ok, %Cat{state: :awake}} = Cat.trigger(cat, :wake)
-      ```
 
   ## Features
   * Validation of state machine definition at compile time
