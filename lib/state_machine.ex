@@ -1,43 +1,70 @@
 defmodule StateMachine do
-  @moduledoc ~S"""
-  StateMachine package implements finite state machine (FSM) abstraction.
+  @moduledoc """
+  StateMachine package implements state machine abstraction.
+  It supports Ecto out of the box and can work as both
+  data structure and a process powered by gen_statem.
 
-  What is this?
+  Check out the [article](https://dev.to/youroff/state-machines-for-business-np8) for motivation.
 
-  What makes it different from other solutions?
+  Here's an example of a simple state machine created with this package:
 
-  Main features
+      ```elixir
+      defmodule Cat do
+        use StateMachine
 
-  Introductory Examples
+        defstruct [:name, :state, hungry: true]
 
-  Core concepts
-  - States
-  - Events
-  - Transitions
-  - Guards
-  - Callbacks
-  - Context
+        defmachine field: :state do
+          state :asleep
+          state :awake
+          state :playing
+          state :eating, after_enter: &Cat.feed_up/1
 
-  Introspection
+          event :wake do
+            transition from: :asleep, to: :awake
+          end
 
-  Application usage
-  - Standalone
-  - GenStatem (TODO)
-  - Ecto integration (TODO)
+          event :give_a_mouse do
+            transition from: :awake, to: :playing, unless: &Cat.hungry/1
+            transition from: :awake, to: :eating, if: &Cat.hungry/1
+            transition from: :playing, to: :eating
+          end
 
-  ## Guards
+          event :pet do
+            transition from: [:eating, :awake], to: :playing
+          end
 
-  ## Callbacks
-  Run order:
-  - before(event)
-  - before(transition)
-  - before_leave(state)
-  - before_enter(state)
-  *** TRANSITION ***
-  - after_leave(state)
-  - after_enter(state)
-  - after(transition)
-  - after(event)
+          event :sing_a_lullaby do
+            transition from: :awake, to: :asleep
+            transition from: :playing, to: :asleep
+          end
+        end
+
+        def hungry(cat) do
+          cat.hungry
+        end
+
+        def feed_up(cat) do
+          {:ok, %{cat | hungry: false}}
+        end
+      end
+      ```
+
+  And later use it like this:
+
+      ```elixir
+      cat = %Cat{name: "Thomas", state: :asleep}
+
+      {:ok, %Cat{state: :awake}} = Cat.trigger(cat, :wake)
+      ```
+
+  ## Features
+  * Validation of state machine definition at compile time
+  * Full support for callbacks (on states, events and transitions) and guards (on events and transitions)
+  * Optional payload can be supplied with the event
+  * One-line conversion to a state machine as a process (powered by gen_statem)
+  * With Ecto support activated every transition is wrapped in transaction
+  * With Ecto support activated the Ecto.Type implementation is generated automatically
   """
   alias StateMachine.{State, Event, Context}
 
