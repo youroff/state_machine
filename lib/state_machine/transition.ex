@@ -14,6 +14,8 @@ defmodule StateMachine.Transition do
     guards: list(Guard.t(model))
   }
 
+  @type callback_pos() :: :before | :after
+
   @enforce_keys [:from, :to]
   defstruct [
     :from,
@@ -47,35 +49,28 @@ defmodule StateMachine.Transition do
 
   If any of the callbacks fails, all sequential ops are cancelled.
   """
-  @spec run(Context.t(model), t(model)) :: Context.t(model) when model: var
-  def run(ctx, transition) do
-    %{ctx | new_state: transition.to}
-    |> Event.before()
-    |> Transition.before(transition)
-    |> State.before_leave()
-    |> State.before_enter()
+  @spec run(Context.t(model)) :: Context.t(model) when model: var
+  def run(ctx) do
+    ctx
+    |> Event.callback(:before)
+    |> Transition.callback(:before)
+    |> State.callback(:before_leave)
+    |> State.callback(:before_enter)
     |> Transition.update_state()
-    |> State.after_leave()
-    |> State.after_enter()
-    |> Transition.after_(transition)
-    |> Event.after_()
+    |> State.callback(:after_leave)
+    |> State.callback(:after_enter)
+    |> Transition.callback(:after)
+    |> Event.callback(:after)
     |> Transition.finalize()
   end
 
   @doc """
-  Private function for running `before_transition` callbacks.
+  Private function for running Transition callbacks.
   """
-  @spec before(Context.t(model), t(model)) :: Context.t(model) when model: var
-  def before(ctx, transition) do
-    Callback.apply_chain(ctx, transition.before, :before_transition)
-  end
-
-  @doc """
-  Private function for running `after_transition` callbacks.
-  """
-  @spec after_(Context.t(model), t(model)) :: Context.t(model) when model: var
-  def after_(ctx, transition) do
-    Callback.apply_chain(ctx, transition.after, :after_transition)
+  @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
+  def callback(ctx, pos) do
+    callbacks = Map.get(ctx.transition, pos)
+    Callback.apply_chain(ctx, callbacks, :"#{pos}_transition")
   end
 
   @doc """
@@ -83,7 +78,7 @@ defmodule StateMachine.Transition do
   """
   @spec update_state(Context.t(model)) :: Context.t(model) when model: var
   def update_state(%{status: :init} = ctx) do
-    ctx.definition.state_setter.(ctx, ctx.new_state)
+    ctx.definition.state_setter.(ctx, ctx.transition.to)
   end
 
   def update_state(ctx), do: ctx
@@ -97,4 +92,11 @@ defmodule StateMachine.Transition do
   end
 
   def finalize(ctx), do: ctx
+
+  @doc """
+  True if transition is a loop, i.e. doesn't change state.
+  """
+  @spec loop?(t(any)) :: boolean
+  def loop?(%{from: s, to: s}), do: true
+  def loop?(_), do: false
 end

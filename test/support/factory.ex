@@ -4,8 +4,8 @@ defmodule StateMachine.Factory do
   defmodule Cat do
     defstruct name: "Garfield", state: :asleep, hungry: false
 
-    def is_hungry?(ctx) do
-      ctx.model.hungry
+    def is_hungry?(model) do
+      model.hungry
     end
   end
 
@@ -97,6 +97,10 @@ defmodule StateMachine.Factory do
         },
         %Transition{
           from: :eating,
+          to: :asleep
+        },
+        %Transition{
+          from: :asleep,
           to: :asleep
         }
       ]

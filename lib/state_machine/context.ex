@@ -6,14 +6,15 @@ defmodule StateMachine.Context do
   (but discuraged) manipulate the Context in callbacks.
   """
 
+  alias StateMachine.Transition
+
   @type t(model) :: %__MODULE__{
     definition: StateMachine.t(model),
     model: model,
     status: :init | :failed | :done,
     error: any,
     event: atom,
-    old_state: atom,
-    new_state: atom,
+    transition: Transition.t(model) | nil,
     payload: any
   }
 
@@ -24,8 +25,7 @@ defmodule StateMachine.Context do
     {:status, :init},
     :error,
     :event,
-    :old_state,
-    :new_state,
+    :transition,
     :payload
   ]
 
@@ -34,10 +34,9 @@ defmodule StateMachine.Context do
   """
   @spec build(StateMachine.t(model), model) :: t(model) when model: var
   def build(definition, model) when is_struct(model) do
-    ctx = %__MODULE__{
+    %__MODULE__{
       definition: definition,
       model: model
     }
-    %{ctx | old_state: ctx.definition.state_getter.(ctx)}
   end
 end

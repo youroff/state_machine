@@ -17,6 +17,8 @@ defmodule StateMachine.Event do
     guards:       list(Guard.t(model)),
   }
 
+  @type callback_pos() :: :before | :after
+
   @enforce_keys [:name]
   defstruct [
     :name,
@@ -47,33 +49,27 @@ defmodule StateMachine.Event do
     with {_, %Event{} = e} <- {:event, Map.get(context.definition.events, event)},
       {_, %Transition{} = t} <- {:transition, find_transition(context, e)}
     do
-      Transition.run(context, t)
+      Transition.run(%{context | transition: t})
     else
       {item, _} -> %{context | status: :failed, error: {item, "Couldn't resolve #{item}"}}
     end
   end
 
   @doc """
-  Private function for running `before_event` callbacks.
+  Private function for running Event callbacks.
   """
-  @spec before(Context.t(model)) :: Context.t(model) when model: var
-  def before(ctx) do
-    Callback.apply_chain(ctx, ctx.definition.events[ctx.event].before, :before_event)
-  end
-
-  @doc """
-  Private function for running `after_event` callbacks.
-  """
-  @spec after_(Context.t(model)) :: Context.t(model) when model: var
-  def after_(ctx) do
-    Callback.apply_chain(ctx, ctx.definition.events[ctx.event].after, :after_event)
+  @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
+  def callback(ctx, pos) do
+    callbacks = Map.get(ctx.definition.events[ctx.event], pos)
+    Callback.apply_chain(ctx, callbacks, :"#{pos}_event")
   end
 
   @spec find_transition(Context.t(model), t(model)) :: Transition.t(model) | nil when model: var
   defp find_transition(ctx, event) do
     if Guard.check(ctx, event) do
+      state = ctx.definition.state_getter.(ctx)
       Enum.find(event.transitions, fn transition ->
-        transition.from == ctx.old_state && Transition.is_allowed?(ctx, transition)
+        transition.from == state && Transition.is_allowed?(ctx, transition)
       end)
     end
   end

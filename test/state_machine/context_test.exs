@@ -3,11 +3,10 @@ defmodule StateMachineContextTest do
   alias StateMachine.Context
   import StateMachine.Factory
 
-  test "build" do
+  test "build fresh context" do
     cat = %StateMachine.Factory.Cat{}
     sm = machine_cat()
     ctx = Context.build(sm, cat)
-    assert ctx.old_state == cat.state
     assert ctx.model == cat
     assert ctx.definition == sm
   end

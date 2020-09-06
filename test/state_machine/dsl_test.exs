@@ -59,8 +59,8 @@ defmodule StateMachineDSLTest do
     assert :wake in Cat.allowed_events(cat)
     wake_ctx = Cat.trigger_with_context(cat, :wake)
     assert wake_ctx.status == :done
-    assert wake_ctx.old_state == :asleep
-    assert wake_ctx.new_state == :awake
+    assert wake_ctx.transition.from == :asleep
+    assert wake_ctx.transition.to == :awake
     assert wake_ctx.model.custom == :awake
     assert wake_ctx.model.hungry
 
@@ -68,16 +68,16 @@ defmodule StateMachineDSLTest do
     assert :sing_a_lullaby in Cat.allowed_events(wake_ctx.model)
     eating_ctx = Cat.trigger_with_context(wake_ctx.model, :give_a_mouse)
     assert eating_ctx.status == :done
-    assert eating_ctx.old_state == :awake
-    assert eating_ctx.new_state == :eating
+    assert eating_ctx.transition.from == :awake
+    assert eating_ctx.transition.to == :eating
     assert eating_ctx.model.custom == :eating
     refute eating_ctx.model.hungry
 
     assert :pet in Cat.allowed_events(eating_ctx.model)
     playing_ctx = Cat.trigger_with_context(eating_ctx.model, :pet, "Some payload")
     assert playing_ctx.status == :done
-    assert playing_ctx.old_state == :eating
-    assert playing_ctx.new_state == :playing
+    assert playing_ctx.transition.from == :eating
+    assert playing_ctx.transition.to == :playing
     assert playing_ctx.model.custom == :playing
     assert playing_ctx.payload == "Some payload"
 
