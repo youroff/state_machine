@@ -8,9 +8,31 @@ defmodule StateMachine.Callback do
 
   alias StateMachine.Context
 
-  @type t(model) :: (model -> {:ok, model} | {:error, any} | any)
-                  | (model, Context.t(model) -> {:ok, model} | {:ok, Context.t(model)} | {:error, any} | any)
-                  | (-> any)
+  @doc """
+  A type of callback that does not expect any input and potentially produces a side effect.
+  Any return value is ignored, except for `{:error, e}` that stops the transition with a given error.
+  """
+  @type side_effect_t :: (-> any)
+
+  @doc """
+  A unary callback, receiving a model struct and that can be updated based on shape of the return:
+    * `{:ok, model}` — replaces model in the context
+    * `{:error, e}` — stops the transition with a given error
+    * `any` — doesn't have any effect on the context
+  """
+  @type unary_t(model) :: (model -> {:ok, model} | {:error, any} | any)
+
+  @doc """
+  A binary callback, receiving a model struct and a context.
+  Either can be updated depending on the shape of the return:
+    * `{:ok, context}` — replaces context completely
+    * `{:ok, model}` — replaces model in the context
+    * `{:error, e}` — stops the transition with a given error
+    * `any` — doesn't have any effect on the context
+  """
+  @type binary_t(model) :: (model, Context.t(model) -> {:ok, model} | {:ok, Context.t(model)} | {:error, any} | any)
+
+  @type t(model) :: unary_t(model) | binary_t(model) | side_effect_t()
 
   @doc """
   Applying a single callback. Callback's return structurally analyzed:
@@ -27,13 +49,20 @@ defmodule StateMachine.Callback do
   def apply_callback(%{status: :init} = ctx, cb, step) do
     arity = Function.info(cb)[:arity]
     strct = ctx.model.__struct__
-    case apply(cb, Enum.take([ctx.model, ctx], arity)) do
-      {:ok, %Context{} = new_ctx} ->
+    case {apply(cb, Enum.take([ctx.model, ctx], arity)), arity} do
+
+      # Only binary callback can return a new context
+      {{:ok, %Context{} = new_ctx}, 2} ->
         new_ctx
-      {:ok, %{__struct__: ^strct} = model} ->
+
+      # Both binary and unary callbacks can return a new model
+      {{:ok, %{__struct__: ^strct} = model}, a} when a > 0 ->
         %{ctx | model: model}
-      {:error, e} ->
+
+      # Any callback can fail and trigger whole transition failure
+      {{:error, e}, _} ->
         %{ctx | status: :failed, error: {step, e}}
+
       _ ->
         ctx
     end

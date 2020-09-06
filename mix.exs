@@ -9,7 +9,11 @@ defmodule StateMachine.MixProject do
     elixirc_paths: elixirc_paths(Mix.env),
     description: description(),
     package: package(),
-    deps: deps()
+    deps: deps(),
+    dialyzer: [
+      plt_add_deps: true,
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+    ]
   ]
 
   def application do
@@ -36,7 +40,7 @@ defmodule StateMachine.MixProject do
     {:ecto, "~> 3.0", optional: true},
     {:ecto_sql, "~> 3.0", optional: true},
     {:postgrex, ">= 0.0.0", optional: true},
-    {:dialyxir, "~> 0.5.1", runtime: false},
+    {:dialyxir, "~> 1.0", only: :dev, runtime: false},
     {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]
 

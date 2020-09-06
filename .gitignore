@@ -25,3 +25,5 @@ state_machine-*.tar
 .elixir_ls
 .dist
 
+/priv/plts/*.plt
+/priv/plts/*.plt.hash

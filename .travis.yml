@@ -12,3 +12,8 @@ before_script:
 
 script:
   - mix test
+  - mix dialyzer
+
+cache:
+  directories:
+    - priv/plts
