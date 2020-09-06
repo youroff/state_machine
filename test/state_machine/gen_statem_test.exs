@@ -7,7 +7,7 @@ defmodule StateMachineGenStatemTest do
     defstruct [:name, :state, hungry: true]
 
     defmachine field: :state do
-      state :asleep
+      state :asleep, after_enter: &TestMachine.get_hungry/1
       state :awake
       state :playing
       state :eating, after_enter: &TestMachine.feed_up/1
@@ -41,13 +41,25 @@ defmodule StateMachineGenStatemTest do
     def feed_up(cat) do
       {:ok, %{cat | hungry: false}}
     end
+
+    def get_hungry(cat) do
+      {:ok, %{cat | hungry: true}}
+    end
   end
 
   test "GenStatem behavior" do
-    model = %TestMachine{state: :playing, name: "Yo"}
-    {:ok, sm} = TestMachine.start_link(model)
+    cat = %TestMachine{state: :playing, name: "Yo"}
+    assert TestMachine.hungry(cat)
 
-    assert {:ok, machine} = TestMachine.trigger_call(sm, :give_a_mouse)
-    assert machine.state == :eating
+    {:ok, sm} = TestMachine.start_link(cat)
+
+    assert {:ok, cat} = TestMachine.trigger_call(sm, :give_a_mouse)
+    refute TestMachine.hungry(cat)
+    assert cat.state == :eating
+
+    assert {:error, {:transition, "Couldn't resolve transition"}} = TestMachine.trigger_call(sm, :sing_a_lullaby)
+
+    assert {:ok, %{state: :playing, hungry: false}} = TestMachine.trigger_call(sm, :pet)
+    assert {:ok, %{state: :asleep, hungry: true}} = TestMachine.trigger_call(sm, :sing_a_lullaby)
   end
 end

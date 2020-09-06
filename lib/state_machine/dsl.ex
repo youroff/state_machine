@@ -296,25 +296,31 @@ defmodule StateMachine.DSL do
       end
 
       def init(model) do
-        sm = __state_machine__()
-        context = Context.build(sm, model)
-        {:ok, context.definition.state_getter.(context), context}
+        context = Context.build(__state_machine__(), model)
+        {:ok, context.definition.state_getter.(context), model}
       end
 
-      def handle_event(kind, {event, payload}, state, context) do
-        new_context = Event.trigger(context, event, payload)
-        actions = case {kind, new_context.status} do
-          {:cast, _} -> []
-          {{:call, from}, :done} -> [{:reply, from, {:ok, new_context.model}}]
-          {{:call, from}, status} -> [{:reply, from, {:error, {status, new_context.message}}}]
+      def handle_event(kind, {event, payload}, state, model) do
+        case __MODULE__.trigger(model, event, payload) do
+          {:ok, new_model} ->
+            context = Context.build(__state_machine__(), new_model)
+            new_state = context.definition.state_getter.(context)
+            {:next_state, new_state, new_model, actions(kind, {:ok, new_model})}
+          {:error, e} ->
+            {:next_state, state, model, actions(kind, {:error, e})}
         end
-
-        next_state = new_context.definition.state_getter.(new_context)
-        {:next_state, next_state, new_context, actions}
       end
 
       def callback_mode do
         :handle_event_function
+      end
+
+      defp actions(:cast, _) do
+        []
+      end
+
+      defp actions({:call, from}, resp) do
+        [{:reply, from, resp}]
       end
     end
   end
