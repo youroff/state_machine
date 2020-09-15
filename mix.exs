@@ -3,7 +3,7 @@ defmodule StateMachine.MixProject do
 
   def project, do: [
     app: :state_machine,
-    version: "0.1.3",
+    version: "0.1.4",
     elixir: "~> 1.10",
     start_permanent: Mix.env() == :prod,
     elixirc_paths: elixirc_paths(Mix.env),
