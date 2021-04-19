@@ -40,7 +40,7 @@ defmodule StateMachine.MixProject do
     {:ecto, "~> 3.0", optional: true},
     {:ecto_sql, "~> 3.0", optional: true},
     {:postgrex, ">= 0.0.0", optional: true},
-    {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+    {:dialyxir, "~> 1.1", only: :dev, runtime: false},
     {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]
 

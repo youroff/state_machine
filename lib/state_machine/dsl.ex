@@ -255,8 +255,8 @@ defmodule StateMachine.DSL do
     quote do
       def trigger(model, event, payload \\ nil) do
         case trigger_with_context(model, event, payload) do
-          %{status: :done, model: model} -> {:ok, model}
-          %{error: m} -> {:error, m}
+          %Context{status: :done, model: model} -> {:ok, model}
+          %Context{error: m} -> {:error, m}
         end
       end
     end
@@ -269,8 +269,8 @@ defmodule StateMachine.DSL do
         repo = __state_machine__().misc[:repo]
         repo.transaction fn ->
           case trigger_with_context(model, event, payload) do
-            %{status: :done, model: model} -> model
-            %{error: m} -> repo.rollback(m)
+            %Context{status: :done, model: model} -> model
+            %Context{error: m} -> repo.rollback(m)
           end
         end
       end
