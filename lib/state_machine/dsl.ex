@@ -7,7 +7,7 @@ defmodule StateMachine.DSL do
   import StateMachine.Utils, only: [keyword_splat: 2]
 
   @doc """
-  Creates a main block for a State Machine definition. Compile time checks and validators help
+  Creates a main block for a State Machine definition. Compile time checks and validations help
   ensuring correct usage of this and other macros.
 
       use StateMachine
@@ -20,26 +20,40 @@ defmodule StateMachine.DSL do
     * `:field` - what field in the model structure holds the state value. Default: `:state`.
     * `:repo` - the Ecto Repo module. If provider, the support for Ecto is activated, including
       state getter/setters, Ecto.Type generation and custom `trigger` function.
-    * `:ecto_type` - name for `Ecto.Type` module. Generated inside of the module namespace.
-      If you state maching is `App.StateMachine`, then `Ecto.Type` implementation will be
-      accessible on `App.StateMachine.(ecto_type)`. Default: `StateType`.
+    * `:state_type` - name for `Ecto.Type` implementation for State type. Generated inside of the module namespace.
+      If you state machine is `App.StateMachine`, then `Ecto.Type` implementation will be
+      accessible on `App.StateMachine.(state_type)`. Default: `StateType`.
+    * `:event_type` - name for `Ecto.Type` implementation for Event type. Default: `EventType`.
   """
   defmacro defmachine(opts \\ [], block) do
     head =
       quote do
+        if Keyword.has_key?(unquote(opts), :ecto_type) do
+          raise CompileError, [
+            file: __ENV__.file,
+            line: __ENV__.line,
+            description: "Option `ecto_type` is deprecated, use `state_type` and `event_type` to generate EctoType implementations respectively"
+          ]
+        end
+
         @after_compile StateMachine.Validation
         Module.register_attribute(__MODULE__, :states, accumulate: true)
         Module.register_attribute(__MODULE__, :events, accumulate: true)
         Module.put_attribute(__MODULE__, :in_defmachine, true)
         Module.put_attribute(__MODULE__, :field, Keyword.get(unquote(opts), :field, :state))
         Module.put_attribute(__MODULE__, :repo, Keyword.get(unquote(opts), :repo))
-        Module.put_attribute(__MODULE__, :ecto_type, Keyword.get(unquote(opts), :ecto_type, StateType))
+        Module.put_attribute(__MODULE__, :state_type, Keyword.get(unquote(opts), :state_type, StateType))
+        Module.put_attribute(__MODULE__, :event_type, Keyword.get(unquote(opts), :event_type, EventType))
         unquote(block)
       end
 
     out =
       quote unquote: false do
-        Module.put_attribute(__MODULE__, :state_names, Enum.map(@states, & &1.name))
+        state_names = Enum.map(@states, & &1.name)
+        Module.put_attribute(__MODULE__, :state_names, state_names)
+
+        event_names = Enum.map(@events, & &1.name)
+        Module.put_attribute(__MODULE__, :event_names, event_names)
 
         states = @states |> Enum.reverse |> Enum.reduce(%{}, fn state, acc ->
           Map.put(acc, state.name, state)
@@ -73,16 +87,27 @@ defmodule StateMachine.DSL do
         introspection_functions()
         if @repo do
           require StateMachine.Ecto
-          StateMachine.Ecto.define_ecto_type()
+          StateMachine.Ecto.define_ecto_type(:state)
+          StateMachine.Ecto.define_ecto_type(:event)
 
           ecto_action_functions()
         else
           action_functions()
         end
 
+        unless Enum.empty?(state_names) do
+          @type state :: unquote(Enum.reduce(state_names, &{:|, [], [&1, &2]}))
+        end
+
+        unless Enum.empty?(event_names) do
+          @type event :: unquote(Enum.reduce(event_names, &{:|, [], [&1, &2]}))
+        end
+
         Module.delete_attribute(__MODULE__, :repo)
-        Module.delete_attribute(__MODULE__, :ecto_type)
+        Module.delete_attribute(__MODULE__, :state_type)
+        Module.delete_attribute(__MODULE__, :event_type)
         Module.delete_attribute(__MODULE__, :state_names)
+        Module.delete_attribute(__MODULE__, :event_names)
       end
 
     quote do

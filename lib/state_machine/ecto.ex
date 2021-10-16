@@ -34,39 +34,40 @@ defmodule StateMachine.Ecto do
   The purpose of this is to be able to cast string into atom and back safely,
   validating it against StateMachine defition.
   """
-  defmacro define_ecto_type() do
+  defmacro define_ecto_type(kind) do
     quote do
-      states = Module.get_attribute(__MODULE__, :state_names)
+      variants = Module.get_attribute(__MODULE__, :"#{unquote(kind)}_names")
+      name = Module.get_attribute(__MODULE__, :"#{unquote(kind)}_type")
 
-      unless states do
+      unless variants do
         raise CompileError, [
           file: __ENV__.file,
           line: __ENV__.line,
-          description: "State Ecto type should be declared inside of state machine definition"
+          description: "Ecto type should be declared inside of state machine definition"
         ]
       end
 
-      defmodule Module.concat(__MODULE__, @ecto_type) do
+      defmodule Module.concat(__MODULE__, name) do
         @behaviour Ecto.Type
 
-        @states states
+        @variants variants
 
         def type, do: :string
 
-        def cast(state) do
-          if s = Enum.find(@states, &to_string(&1) == to_string(state)) do
+        def cast(value) do
+          if s = Enum.find(@variants, &to_string(&1) == to_string(value)) do
             {:ok, s}
           else
             :error
           end
         end
 
-        def load(state) do
-          {:ok, String.to_atom(state)}
+        def load(value) do
+          {:ok, String.to_atom(value)}
         end
 
-        def dump(state) when state in @states do
-          {:ok, to_string(state)}
+        def dump(value) when value in @variants do
+          {:ok, to_string(value)}
         end
 
         def dump(_), do: :error

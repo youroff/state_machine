@@ -4,7 +4,7 @@ defmodule StateMachine.Ecto.StateTypeTest do
   defmodule StateMachineForEcto do
     use StateMachine
 
-    defmachine repo: TestApp.Repo, ecto_type: CustomMod do
+    defmachine repo: TestApp.Repo, state_type: CustomMod do
       state :asleep
       state :awake
     end
