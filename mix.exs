@@ -32,7 +32,7 @@ defmodule StateMachine.MixProject do
   defp package, do: [
    files: ["lib", "mix.exs", "README*", "LICENSE*"],
    maintainers: ["Ivan Yurov"],
-   licenses: ["Apache 2.0"],
+   licenses: ["MIT"],
    links: %{"GitHub" => "https://github.com/youroff/state_machine"}
   ]
 
