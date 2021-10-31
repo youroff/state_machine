@@ -50,33 +50,6 @@ defmodule StateMachine.Ecto do
       defmodule Module.concat(__MODULE__, name) do
         @variants variants
         StateMachine.Ecto.define_enum(@variants)
-        # @behaviour Ecto.Type
-
-        # @variants variants
-
-        # def type, do: :string
-
-        # def cast(value) do
-        #   if s = Enum.find(@variants, &to_string(&1) == to_string(value)) do
-        #     {:ok, s}
-        #   else
-        #     :error
-        #   end
-        # end
-
-        # def load(value) do
-        #   {:ok, String.to_atom(value)}
-        # end
-
-        # def dump(value) when value in @variants do
-        #   {:ok, to_string(value)}
-        # end
-
-        # def dump(_), do: :error
-
-        # def equal?(s1, s2), do: to_string(s1) == to_string(s2)
-
-        # def embed_as(_), do: :self
       end
     end
   end
