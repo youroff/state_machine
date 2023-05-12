@@ -1,5 +1,8 @@
 defmodule StateMachineDSLTest do
   use ExUnit.Case, async: true
+
+  alias StateMachine.Error
+
   doctest StateMachine
 
   @compile {:no_warn_undefined, Cat}
@@ -57,7 +60,7 @@ defmodule StateMachineDSLTest do
     """
     cat = struct(Cat, %{name: "Bobik", custom: :asleep})
     assert :wake in Cat.allowed_events(cat)
-    wake_ctx = Cat.trigger_with_context(cat, :wake)
+    {:ok, wake_ctx} = Cat.trigger_with_context(cat, :wake)
     assert wake_ctx.status == :done
     assert wake_ctx.transition.from == :asleep
     assert wake_ctx.transition.to == :awake
@@ -66,7 +69,7 @@ defmodule StateMachineDSLTest do
 
     assert :give_a_mouse in Cat.allowed_events(wake_ctx.model)
     assert :sing_a_lullaby in Cat.allowed_events(wake_ctx.model)
-    eating_ctx = Cat.trigger_with_context(wake_ctx.model, :give_a_mouse)
+    {:ok, eating_ctx} = Cat.trigger_with_context(wake_ctx.model, :give_a_mouse)
     assert eating_ctx.status == :done
     assert eating_ctx.transition.from == :awake
     assert eating_ctx.transition.to == :eating
@@ -74,18 +77,18 @@ defmodule StateMachineDSLTest do
     refute eating_ctx.model.hungry
 
     assert :pet in Cat.allowed_events(eating_ctx.model)
-    playing_ctx = Cat.trigger_with_context(eating_ctx.model, :pet, "Some payload")
+    {:ok, playing_ctx} = Cat.trigger_with_context(eating_ctx.model, :pet, "Some payload")
     assert playing_ctx.status == :done
     assert playing_ctx.transition.from == :eating
     assert playing_ctx.transition.to == :playing
     assert playing_ctx.model.custom == :playing
     assert playing_ctx.payload == "Some payload"
 
-    assert {:error, {:event, "Couldn't resolve event"}} = Cat.trigger(cat, :something)
-    assert {:error, {:transition, "Couldn't resolve transition"}} = Cat.trigger(cat, :pet)
+    assert {:error, %Error.UnknownEvent{event: :something}} = Cat.trigger(cat, :something)
+    assert {:error, %Error.UnresolvedTransition{event: :pet}} = Cat.trigger(cat, :pet)
 
     assert {:ok, awake_cat} = Cat.trigger(cat, :wake)
-    assert {:error, {:after_transition, "Your cat is broken now"}} = Cat.trigger(awake_cat, :wash)
+    assert {:error, %Error.CallbackError{step: :after_transition, error: "Your cat is broken now"}} = Cat.trigger(awake_cat, :wash)
 
     assert :give_a_mouse in Cat.allowed_events(playing_ctx.model)
     assert :sing_a_lullaby in Cat.allowed_events(playing_ctx.model)

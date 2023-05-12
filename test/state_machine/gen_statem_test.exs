@@ -1,5 +1,6 @@
 defmodule StateMachineGenStatemTest do
   use ExUnit.Case, async: true
+  alias StateMachine.Error
 
   defmodule TestMachine do
     use StateMachine
@@ -57,7 +58,7 @@ defmodule StateMachineGenStatemTest do
     refute TestMachine.hungry(cat)
     assert cat.state == :eating
 
-    assert {:error, {:transition, "Couldn't resolve transition"}} = TestMachine.trigger_call(sm, :sing_a_lullaby)
+    assert {:error, %Error.UnresolvedTransition{event: :sing_a_lullaby}} = TestMachine.trigger_call(sm, :sing_a_lullaby)
 
     assert {:ok, %{state: :playing, hungry: false}} = TestMachine.trigger_call(sm, :pet)
     assert {:ok, %{state: :asleep, hungry: true}} = TestMachine.trigger_call(sm, :sing_a_lullaby)

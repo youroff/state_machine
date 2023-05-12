@@ -12,7 +12,6 @@ defmodule StateMachine.Context do
     definition: StateMachine.t(model),
     model: model,
     status: :init | :failed | :done,
-    error: any,
     event: atom,
     transition: Transition.t(model) | nil,
     payload: any
@@ -23,7 +22,6 @@ defmodule StateMachine.Context do
     :definition,
     :model,
     {:status, :init},
-    :error,
     :event,
     :transition,
     :payload

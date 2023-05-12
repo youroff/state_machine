@@ -62,23 +62,23 @@ defmodule StateMachine do
   * With Ecto support activated every transition is wrapped in transaction
   * With Ecto support activated the Ecto.Type implementation is generated automatically
   """
-  alias StateMachine.{State, Event, Context}
+  alias StateMachine.{Context, Error, Event, State, Event}
 
   @type t(m) :: %__MODULE__{
-    states: %{optional(atom) => State.t(m)},
-    events: %{optional(atom) => Event.t(m)},
-    field:  atom(),
+    states:       %{optional(atom) => State.t(m)},
+    events:       %{optional(atom) => Event.t(m)},
+    field:        atom(),
     state_getter: (Context.t(m) -> atom()),
-    state_setter: (Context.t(m), atom() -> Context.t(m)),
-    misc: keyword()
+    state_setter: (Context.t(m), atom() -> {:ok, Context.t(m)} | {:error, Error.SetError.t(m)}),
+    misc:         keyword()
   }
 
   defstruct states: %{},
-    events: %{},
-    field: :state,
-    state_getter: &State.get/1,
-    state_setter: &State.set/2,
-    misc: []
+    events:         %{},
+    field:          :state,
+    state_getter:   &State.get/1,
+    state_setter:   &State.set/2,
+    misc:           []
 
   defmacro __using__(_) do
     quote do

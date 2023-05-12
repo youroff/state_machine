@@ -7,17 +7,19 @@ defmodule StateMachine.State do
   The state get/setters for basic structures and Ecto records are provided out of the box.
   """
 
-  alias StateMachine.{Context, Callback, Transition}
+  alias StateMachine.{Callback, Context, Error, Transition}
 
   @callback get(ctx :: Context.t(any)) :: atom()
-  @callback set(ctx :: Context.t(model), state :: atom) :: Context.t(model) when model: var
+  @callback set(ctx :: Context.t(model), state :: atom) ::
+              {:ok, Context.t(model)} | {:error, Error.SetError.t(model)}
+            when model: var
 
   @type t(model) :: %__MODULE__{
-    name:  atom,
+    name:         atom,
     before_enter: list(Callback.t(model)),
-    after_enter: list(Callback.t(model)),
+    after_enter:  list(Callback.t(model)),
     before_leave: list(Callback.t(model)),
-    after_leave: list(Callback.t(model))
+    after_leave:  list(Callback.t(model))
   }
 
   @type callback_pos() :: :before_enter | :after_enter | :before_leave | :after_leave
@@ -26,20 +28,22 @@ defmodule StateMachine.State do
   defstruct [
     :name,
     before_enter: [],
-    after_enter: [],
+    after_enter:  [],
     before_leave: [],
-    after_leave: []
+    after_leave:  []
   ]
 
   @doc """
   Private function for running state callbacks.
   """
-  @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
+  @spec callback(Context.t(model), callback_pos()) ::
+          {:ok, Context.t(model)} | {:error, Error.CallbackError.t(model)}
+        when model: var
   def callback(ctx, pos) do
     if Transition.loop?(ctx.transition) do
-      ctx
+      {:ok, ctx}
     else
-      source = String.ends_with?(to_string(pos), "_enter") && :to || :from
+      source = (String.ends_with?(to_string(pos), "_enter") && :to) || :from
       state_name = Map.get(ctx.transition, source)
       state = ctx.definition.states[state_name]
       Callback.apply_chain(ctx, Map.get(state, pos), pos)
@@ -57,8 +61,8 @@ defmodule StateMachine.State do
   @doc """
   Default implementation of a state setter.
   """
-  @spec set(Context.t(model), atom()) :: Context.t(model) when model: var
+  @spec set(Context.t(model), atom()) :: {:ok, Context.t(model)} when model: var
   def set(ctx, state) do
-    %{ctx | model: Map.put(ctx.model, ctx.definition.field, state)}
+    {:ok, %{ctx | model: Map.put(ctx.model, ctx.definition.field, state)}}
   end
 end
