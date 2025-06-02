@@ -48,34 +48,32 @@ defmodule StateMachine.Ecto do
       end
 
       defmodule Module.concat(__MODULE__, name) do
-        @variants variants
-        StateMachine.Ecto.define_enum(@variants)
+        StateMachine.Ecto.define_enum(variants)
       end
     end
   end
 
   defmacro define_enum(variants) do
-    quote do
+    quote bind_quoted: [variants: variants] do
       @behaviour Ecto.Type
 
+      @type t :: unquote(Enum.reduce(variants, &{:|, [], [&1, &2]}))
       def type, do: :string
 
-      def cast(value) do
-        if s = Enum.find(unquote(variants), &to_string(&1) == to_string(value)) do
-          {:ok, s}
-        else
-          :error
-        end
+      for atom <- variants do
+        def cast(unquote(to_string(atom))), do: {:ok, unquote(atom)}
+        def cast(unquote(atom)), do: {:ok, unquote(atom)}
       end
+      def cast(_), do: :error
 
-      def load(value) do
-        {:ok, String.to_atom(value)}
+      for atom <- variants do
+        def load(unquote(to_string(atom))), do: {:ok, unquote(atom)}
       end
+      def load(_), do: :error
 
-      def dump(value) when value in unquote(variants) do
-        {:ok, to_string(value)}
+      for atom <- variants do
+        def dump(unquote(atom)), do: {:ok, unquote(to_string(atom))}
       end
-
       def dump(_), do: :error
 
       def equal?(s1, s2), do: to_string(s1) == to_string(s2)

@@ -10,10 +10,7 @@ defmodule StateMachine.MixProject do
     description: description(),
     package: package(),
     deps: deps(),
-    dialyzer: [
-      plt_add_deps: true,
-      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
-    ]
+    dialyzer: []
   ]
 
   def application do

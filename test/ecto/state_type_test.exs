@@ -17,8 +17,7 @@ defmodule StateMachine.Ecto.StateTypeTest do
     assert {:ok, :awake} = CustomMod.cast(:awake)
     assert {:ok, :asleep} = CustomMod.cast("asleep")
 
-    # Some phased out states can be present in the DB, we probably don't want to crash here
-    assert {:ok, :non_existent_state} = CustomMod.load("non_existent_state")
+    assert :error = CustomMod.load("non_existent_state")
     assert {:ok, :awake} = CustomMod.load("awake")
 
     assert {:ok, "awake"} = CustomMod.dump(:awake)

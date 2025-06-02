@@ -11,7 +11,7 @@ defmodule StateMachine.Ecto.EnumTest do
     assert {:ok, :what} = GeneralEnum.cast(:what)
     assert {:ok, :lol} = GeneralEnum.cast("lol")
 
-    assert {:ok, :non_existent_state} = GeneralEnum.load("non_existent_state")
+    assert :error = GeneralEnum.load("non_existent_state")
     assert {:ok, :what} = GeneralEnum.load("what")
 
     assert {:ok, "what"} = GeneralEnum.dump(:what)

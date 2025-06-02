@@ -87,8 +87,13 @@ defmodule StateMachine.DSL do
         introspection_functions()
         if @repo do
           require StateMachine.Ecto
-          StateMachine.Ecto.define_ecto_type(:state)
-          StateMachine.Ecto.define_ecto_type(:event)
+          unless Enum.empty?(state_names) do
+            StateMachine.Ecto.define_ecto_type(:state)
+          end
+
+          unless Enum.empty?(event_names) do
+            StateMachine.Ecto.define_ecto_type(:event)
+          end
 
           ecto_action_functions()
         else
