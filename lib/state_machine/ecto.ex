@@ -59,6 +59,7 @@ defmodule StateMachine.Ecto do
 
       @type t :: unquote(Enum.reduce(variants, &{:|, [], [&1, &2]}))
       def type, do: :string
+      def values, do: unquote(variants)
 
       for atom <- variants do
         def cast(unquote(to_string(atom))), do: {:ok, unquote(atom)}

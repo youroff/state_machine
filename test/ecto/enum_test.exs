@@ -18,5 +18,9 @@ defmodule StateMachine.Ecto.EnumTest do
     assert :error = GeneralEnum.dump(:non_existent_state)
 
     assert GeneralEnum.equal? :what, "what"
+
+    assert :what in GeneralEnum.values()
+    assert :lol in GeneralEnum.values()
+    assert length(GeneralEnum.values()) == 2
   end
 end
