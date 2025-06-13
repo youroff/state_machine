@@ -96,9 +96,9 @@ defmodule StateMachine.Ecto do
     |> ctx.definition.misc[:repo].update()
     |> case do
       {:ok, model} ->
-        %{ctx | model: model}
+        {:ok, %{ctx | model: model}}
       {:error, e} ->
-        %{ctx | status: :failed, message: {:set_state, e}}
+        {:error, %StateMachine.Error.SetError{context: ctx, error: e}}
     end
   end
 end

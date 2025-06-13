@@ -7,12 +7,15 @@ defmodule StateMachine.Callback do
   """
 
   alias StateMachine.Context
+  alias StateMachine.Error
 
   @type side_effect_t :: (-> any)
 
   @type unary_t(model) :: (model -> {:ok, model} | {:error, any} | any)
 
-  @type binary_t(model) :: (model, Context.t(model) -> {:ok, model} | {:ok, Context.t(model)} | {:error, any} | any)
+  @type binary_t(model) ::
+          (model, Context.t(model) ->
+             {:ok, model} | {:ok, Context.t(model)} | {:error, any} | any)
 
   @type t(model) :: unary_t(model) | binary_t(model) | side_effect_t()
 
@@ -38,38 +41,47 @@ defmodule StateMachine.Callback do
   A type of callback that does not expect any input and potentially produces a side effect.
   Any return value is ignored, except for `{:error, e}` that stops the transition with a given error.
   """
-  @spec apply_callback(Context.t(model), t(model), atom()) :: Context.t(model) when model: var
+  @spec apply_callback(Context.t(model), t(model), atom()) ::
+          {:ok, Context.t(model)} | {:error, Error.CallbackError.t(model)}
+        when model: var
   def apply_callback(%{status: :init} = ctx, cb, step) do
     arity = Function.info(cb)[:arity]
     strct = ctx.model.__struct__
-    case {apply(cb, Enum.take([ctx.model, ctx], arity)), arity} do
 
+    case {apply(cb, Enum.take([ctx.model, ctx], arity)), arity} do
       # Only binary callback can return a new context
       {{:ok, %Context{} = new_ctx}, 2} ->
-        new_ctx
+        {:ok, new_ctx}
 
       # Both binary and unary callbacks can return a new model
       {{:ok, %{__struct__: ^strct} = model}, a} when a > 0 ->
-        %{ctx | model: model}
+        {:ok, %{ctx | model: model}}
 
       # Any callback can fail and trigger whole transition failure
       {{:error, e}, _} ->
-        %{ctx | status: :failed, error: {step, e}}
+        {:error, %Error.CallbackError{context: ctx, step: step, error: e}}
 
       _ ->
-        ctx
+        {:ok, ctx}
     end
   end
 
-  def apply_callback(ctx, _, _), do: ctx
+  def apply_callback(ctx, _, _), do: {:ok, ctx}
 
   @doc """
   Applying a chain of callbacks. Application only happens if `status` hasn't been changed.
   """
-  @spec apply_chain(Context.t(model), list(t(model)), atom()) :: Context.t(model) when model: var
+  @spec apply_chain(Context.t(model), list(t(model)), atom()) ::
+          {:ok, Context.t(model)} | {:error, Error.CallbackError.t(model)}
+        when model: var
   def apply_chain(%{status: :init} = ctx, cbs, step) when is_list(cbs) do
-    Enum.reduce(cbs, ctx, &apply_callback(&2, &1, step))
+    Enum.reduce_while(cbs, {:ok, ctx}, fn cb, {:ok, context} ->
+      case apply_callback(context, cb, step) do
+        {:ok, new_context} -> {:cont, {:ok, new_context}}
+        {:error, e} -> {:halt, {:error, e}}
+      end
+    end)
   end
 
-  def apply_chain(ctx, _, _), do: ctx
+  def apply_chain(ctx, _, _), do: {:ok, ctx}
 end
