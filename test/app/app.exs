@@ -23,7 +23,7 @@ defmodule TestApp.CatMachine do
       transition from: :playing, to: :eating
     end
 
-    event :pet do
+    event :pet, passthrough: true do
       transition from: [:eating, :awake], to: :playing
     end
 

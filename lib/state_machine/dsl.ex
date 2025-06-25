@@ -177,6 +177,8 @@ defmodule StateMachine.DSL do
     * `:after` - run the callback after the event.
     * `:if` - positive guard, must return `true` to proceed.
     * `:unless` - negative guard, must return `false` to proceed.
+    * `:passthrough` - makes the event always allowed, in absense of a custom transition matching the current state and passing guards,
+      it creates a noop transition back to the original state.
   """
   defmacro event(name, opts \\ [], block) when is_atom(name) do
     head =
@@ -202,6 +204,7 @@ defmodule StateMachine.DSL do
         Module.delete_attribute(__MODULE__, :in_event)
         @events %Event{
           name: unquote(name),
+          passthrough: Keyword.get(unquote(opts), :passthrough, false),
           transitions: unquote(transitions),
           before: keyword_splat(unquote(opts), :before),
           after:  keyword_splat(unquote(opts), :after),
