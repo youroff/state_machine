@@ -99,4 +99,10 @@ defmodule StateMachine.Transition do
   @spec loop?(t(any)) :: boolean
   def loop?(%{from: s, to: s}), do: true
   def loop?(_), do: false
+
+  @spec passthrough(Context.t(model)) :: t(model) when model: var
+  def passthrough(ctx) do
+    state = ctx.definition.state_getter.(ctx)
+    %__MODULE__{from: state, to: state}
+  end
 end

@@ -11,6 +11,7 @@ defmodule StateMachine.Event do
 
   @type t(model) :: %__MODULE__{
     name:         atom,
+    passthrough:  boolean,
     transitions:  list(Transition.t(model)),
     before:       list(Callback.t(model)),
     after:        list(Callback.t(model)),
@@ -22,6 +23,7 @@ defmodule StateMachine.Event do
   @enforce_keys [:name]
   defstruct [
     :name,
+    passthrough: false,
     transitions:  [],
     before:       [],
     after:        [],
@@ -68,9 +70,14 @@ defmodule StateMachine.Event do
   defp find_transition(ctx, event) do
     if Guard.check(ctx, event) do
       state = ctx.definition.state_getter.(ctx)
-      Enum.find(event.transitions, fn transition ->
-        transition.from == state && Transition.is_allowed?(ctx, transition)
+      transition = Enum.find(event.transitions, fn t ->
+        t.from == state && Transition.is_allowed?(ctx, t)
       end)
+      if is_nil(transition) && event.passthrough do
+        Transition.passthrough(ctx)
+      else
+        transition
+      end
     end
   end
 end
