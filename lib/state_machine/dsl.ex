@@ -36,7 +36,6 @@ defmodule StateMachine.DSL do
           ]
         end
 
-        @after_compile StateMachine.Validation
         Module.register_attribute(__MODULE__, :states, accumulate: true)
         Module.register_attribute(__MODULE__, :events, accumulate: true)
         Module.put_attribute(__MODULE__, :in_defmachine, true)
@@ -75,14 +74,16 @@ defmodule StateMachine.DSL do
         Module.delete_attribute(__MODULE__, :field)
         Module.delete_attribute(__MODULE__, :in_defmachine)
 
-        def __state_machine__, do: %StateMachine{
-          field: unquote(field),
-          states: unquote(Macro.escape(states)),
-          events: unquote(Macro.escape(events)),
-          state_getter: unquote(Macro.escape(getter)),
-          state_setter: unquote(Macro.escape(setter)),
-          misc: unquote(Macro.escape(misc))
-        }
+        Module.put_attribute(__MODULE__, :state_machine_def, %StateMachine{
+          field: field,
+          states: states,
+          events: events,
+          state_getter: getter,
+          state_setter: setter,
+          misc: misc
+        })
+
+        def __state_machine__, do: @state_machine_def
 
         introspection_functions()
         if @repo do

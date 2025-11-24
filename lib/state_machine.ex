@@ -85,13 +85,7 @@ defmodule StateMachine do
       import StateMachine.DSL
       alias StateMachine.Introspection
 
-      @after_compile StateMachine
-    end
-  end
-
-  def __after_compile__(env, _) do
-    unless function_exported?(env.module, :__state_machine__, 0) do
-      raise CompileError, file: env.file, description: "Define state machine using `defmachine` macro"
+      @before_compile StateMachine.Validation
     end
   end
 end

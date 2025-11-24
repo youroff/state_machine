@@ -9,8 +9,13 @@ defmodule StateMachine.Validation do
 
   alias StateMachine.Introspection
 
-  def __after_compile__(env, _) do
-    with errors when errors != [] <- validate_all(apply(env.module, :__state_machine__, [])) do
+  defmacro __before_compile__(env) do
+    definition = Module.get_attribute(env.module, :state_machine_def)
+    unless definition do
+      raise CompileError, file: env.file, description: "Define state machine using `defmachine` macro"
+    end
+
+    with errors when errors != [] <- validate_all(definition) do
       raise CompileError, [file: env.file, description: Enum.join(errors, "\n")]
     end
   end

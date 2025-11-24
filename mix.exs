@@ -3,14 +3,15 @@ defmodule StateMachine.MixProject do
 
   def project, do: [
     app: :state_machine,
-    version: "0.1.8",
+    version: "0.1.9",
     elixir: "~> 1.10",
     start_permanent: Mix.env() == :prod,
     elixirc_paths: elixirc_paths(Mix.env),
     description: description(),
     package: package(),
     deps: deps(),
-    dialyzer: []
+    dialyzer: [],
+    test_pattern: "*_test.{ex,exs}"
   ]
 
   def application do
