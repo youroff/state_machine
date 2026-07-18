@@ -1,5 +1,4 @@
 defmodule StateMachine.Utils do
-
   @spec keyword_splat(keyword(), atom(), any) :: list(any)
   def keyword_splat(keyword, key, default \\ []) do
     case Keyword.get(keyword, key) do
@@ -18,7 +17,8 @@ defmodule StateMachine.Utils do
     Function.capture(mod, name, 1)
   end
 
-  def normalize_funciton(_, x) do
-    raise ArgumentError, "Expecting `:fun` of arity 1 from current module or captured function `&Mod.fun/1` as a callback, given: #{inspect x}"
+  def normalize_function(_, x) do
+    raise ArgumentError,
+          "Expecting `:fun` of arity 1 from current module or captured function `&Mod.fun/1` as a callback, given: #{inspect(x)}"
   end
 end
