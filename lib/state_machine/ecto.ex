@@ -100,11 +100,10 @@ defmodule StateMachine.Ecto do
 
     field = ctx.definition.field
     previous = get(ctx)
+    schema = ctx.model.__struct__
 
-    base = case Ecto.get_meta(ctx.model, :prefix) do
-      nil -> ctx.model.__struct__
-      prefix -> Ecto.Query.put_query_prefix(ctx.model.__struct__, prefix)
-    end
+    base = ctx.model.__struct__
+    |> Ecto.Query.put_query_prefix(Ecto.get_meta(ctx.model, :prefix))
 
     query = Ecto.primary_key!(ctx.model)
     |> Enum.reduce(base, fn {pk, value}, query ->
@@ -112,9 +111,17 @@ defmodule StateMachine.Ecto do
     end)
     |> where([m], field(m, ^field) == ^previous)
 
-    case ctx.definition.misc[:repo].update_all(query, set: [{field, state}]) do
+    updated_at = if :updated_at in schema.__schema__(:fields) do
+      [updated_at: Ecto.Schema.__timestamps__(schema.__schema__(:type, :updated_at))]
+    else
+      []
+    end
+
+    changes = [{field, state} | updated_at]
+
+    case ctx.definition.misc[:repo].update_all(query, set: changes) do
       {1, _} ->
-        %{ctx | model: Map.put(ctx.model, field, state)}
+        %{ctx | model: struct(ctx.model, changes)}
 
       {0, _} ->
         %{ctx | status: :failed, error: {:set_state, :stale}}

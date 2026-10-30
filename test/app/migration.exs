@@ -6,6 +6,7 @@ defmodule TestApp.Migration do
       add :name, :string
       add :state, :string
       add :hungry, :boolean
+      timestamps()
     end
   end
 end

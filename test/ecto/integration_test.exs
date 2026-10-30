@@ -28,4 +28,15 @@ defmodule StateMachine.Ecto.IntegrationTest do
     assert {:error, {:set_state, :stale}} = CatMachine.trigger(tom, :wake)
     assert Repo.get!(Cat, tom.id).state == :playing
   end
+
+  test "bumps updated_at when the schema has that field" do
+    {:ok, tom} = %Cat{name: "Tom", state: :asleep, hungry: false} |> Repo.insert()
+    past = ~N[2000-01-01 00:00:00]
+    {:ok, tom} = Ecto.Changeset.change(tom, %{updated_at: past}) |> Repo.update()
+
+    {:ok, awake} = CatMachine.trigger(tom, :wake)
+
+    assert NaiveDateTime.compare(awake.updated_at, past) == :gt
+    assert Repo.get!(Cat, tom.id).updated_at == awake.updated_at
+  end
 end

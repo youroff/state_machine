@@ -49,5 +49,6 @@ defmodule TestApp.Cat do
     field :name, :string
     field :state, TestApp.CatMachine.StateType
     field :hungry, :boolean
+    timestamps()
   end
 end
