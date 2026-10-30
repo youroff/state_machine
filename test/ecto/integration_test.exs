@@ -17,4 +17,15 @@ defmodule StateMachine.Ecto.IntegrationTest do
     {:ok, tom_still_playing} = CatMachine.trigger(tom_playing, :pet)
     assert tom_still_playing.state == :playing
   end
+
+  test "a stale model cannot overwrite a state changed by a concurrent transition" do
+    {:ok, tom} = %Cat{name: "Tom", state: :asleep, hungry: false} |> Repo.insert()
+
+    {:ok, awake} = CatMachine.trigger(tom, :wake)
+    {:ok, playing} = CatMachine.trigger(awake, :give_a_mouse)
+
+    assert playing.state == :playing
+    assert {:error, {:set_state, :stale}} = CatMachine.trigger(tom, :wake)
+    assert Repo.get!(Cat, tom.id).state == :playing
+  end
 end

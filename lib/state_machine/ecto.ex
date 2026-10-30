@@ -3,7 +3,9 @@ defmodule StateMachine.Ecto do
   This addition makes StateMachine fully compatible with Ecto.
 
   State setter and getter are abstracted in order to provide a way to update a state
-  in the middle of transition for a various types of models. With Ecto, we call `change() |> Repo.update`.
+  in the middle of transition for a various types of models. With Ecto, we call `Repo.update_all`,
+  matching the primary key and the previous state. If a concurrent transition already moved the row,
+  no record matches and this transition fails instead of writing an illegal state.
   We also wrap every event in transaction, which is rolled back if transition fails to finish.
   This unlocks a lot of beautiful effects. For example, you can enqueue some tasks into db-powered queue in callbacks,
   and if transition failes, those tasks will naturally disappear.
@@ -40,11 +42,10 @@ defmodule StateMachine.Ecto do
       name = Module.get_attribute(__MODULE__, :"#{unquote(kind)}_type")
 
       unless variants do
-        raise CompileError, [
+        raise CompileError,
           file: __ENV__.file,
           line: __ENV__.line,
           description: "Ecto type should be declared inside of state machine definition"
-        ]
       end
 
       defmodule Module.concat(__MODULE__, name) do
@@ -65,16 +66,19 @@ defmodule StateMachine.Ecto do
         def cast(unquote(to_string(atom))), do: {:ok, unquote(atom)}
         def cast(unquote(atom)), do: {:ok, unquote(atom)}
       end
+
       def cast(_), do: :error
 
       for atom <- variants do
         def load(unquote(to_string(atom))), do: {:ok, unquote(atom)}
       end
+
       def load(_), do: :error
 
       for atom <- variants do
         def dump(unquote(atom)), do: {:ok, unquote(to_string(atom))}
       end
+
       def dump(_), do: :error
 
       def equal?(s1, s2), do: to_string(s1) == to_string(s2)
@@ -92,13 +96,28 @@ defmodule StateMachine.Ecto do
 
   @impl true
   def set(ctx, state) do
-    Ecto.Changeset.change(ctx.model, [{ctx.definition.field, state}])
-    |> ctx.definition.misc[:repo].update()
-    |> case do
-      {:ok, model} ->
-        %{ctx | model: model}
-      {:error, e} ->
-        %{ctx | status: :failed, message: {:set_state, e}}
+    import Ecto.Query
+
+    field = ctx.definition.field
+    previous = get(ctx)
+
+    base = case Ecto.get_meta(ctx.model, :prefix) do
+      nil -> ctx.model.__struct__
+      prefix -> Ecto.Query.put_query_prefix(ctx.model.__struct__, prefix)
+    end
+
+    query = Ecto.primary_key!(ctx.model)
+    |> Enum.reduce(base, fn {pk, value}, query ->
+      where(query, [m], field(m, ^pk) == ^value)
+    end)
+    |> where([m], field(m, ^field) == ^previous)
+
+    case ctx.definition.misc[:repo].update_all(query, set: [{field, state}]) do
+      {1, _} ->
+        %{ctx | model: Map.put(ctx.model, field, state)}
+
+      {0, _} ->
+        %{ctx | status: :failed, error: {:set_state, :stale}}
     end
   end
 end
