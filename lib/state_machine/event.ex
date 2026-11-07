@@ -61,10 +61,7 @@ defmodule StateMachine.Event do
   Private function for running Event callbacks.
   """
   @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
-  def callback(ctx, pos) do
-    callbacks = Map.get(ctx.definition.events[ctx.event], pos)
-    Callback.apply_chain(ctx, callbacks, :"#{pos}_event")
-  end
+  defdelegate callback(ctx, pos), to: Transition, as: :event_callback
 
   @spec find_transition(Context.t(model), t(model)) :: Transition.t(model) | nil when model: var
   defp find_transition(ctx, event) do

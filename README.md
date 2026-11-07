@@ -1,7 +1,5 @@
 # StateMachine
 
-[![Build Status](https://travis-ci.org/youroff/state_machine.svg?branch=master)](https://travis-ci.org/youroff/state_machine)
-
 StateMachine package implements state machine abstraction.
 It supports Ecto out of the box and can work as both
 data structure and a process powered by gen_statem.
@@ -82,4 +80,15 @@ end
 ```
 
 The documentation can be found at [https://hexdocs.pm/state_machine](https://hexdocs.pm/state_machine).
+
+Requires Elixir `~> 1.18`.
+
+## Proofs
+
+[Lynx](https://github.com/josevalim/lynx) checks four laws about `Transition` itself, in `test/laws/transition_test.exs`:
+
+* `loop?/1` is true when `from` and `to` are the same term, and false when they are not exactly equal.
+* `finalize/1` leaves a map whose status is already `:done` unchanged, and a map whose status is `:init` compares equal to the same map with status `:done`.
+
+`mix test --only laws` runs them. Lean 4.35.0 has to be on `PATH`; Lynx selects it through Elan. Ecto and `:gen_statem` stay outside these laws. An unguarded `trigger/3` translates, and this package does not yet include that proof.
 

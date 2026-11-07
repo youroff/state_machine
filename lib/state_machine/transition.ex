@@ -4,7 +4,7 @@ defmodule StateMachine.Transition do
   around transition from the old state to the new state in response to an event.
   """
 
-  alias StateMachine.{Transition, Event, State, Context, Callback, Guard}
+  alias StateMachine.{Context, Callback, Guard}
 
   @type t(model) :: %__MODULE__{
     from:   atom,
@@ -15,6 +15,7 @@ defmodule StateMachine.Transition do
   }
 
   @type callback_pos() :: :before | :after
+  @type state_callback_pos() :: :before_enter | :after_enter | :before_leave | :after_leave
 
   @enforce_keys [:from, :to]
   defstruct [
@@ -52,16 +53,36 @@ defmodule StateMachine.Transition do
   @spec run(Context.t(model)) :: Context.t(model) when model: var
   def run(ctx) do
     ctx
-    |> Event.callback(:before)
-    |> Transition.callback(:before)
-    |> State.callback(:before_leave)
-    |> State.callback(:before_enter)
-    |> Transition.update_state()
-    |> State.callback(:after_leave)
-    |> State.callback(:after_enter)
-    |> Transition.callback(:after)
-    |> Event.callback(:after)
-    |> Transition.finalize()
+    |> event_callback(:before)
+    |> callback(:before)
+    |> state_callback(:before_leave)
+    |> state_callback(:before_enter)
+    |> update_state()
+    |> state_callback(:after_leave)
+    |> state_callback(:after_enter)
+    |> callback(:after)
+    |> event_callback(:after)
+    |> finalize()
+  end
+
+  @doc false
+  @spec event_callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
+  def event_callback(ctx, pos) do
+    callbacks = Map.get(Map.get(ctx.definition.events, ctx.event), pos)
+    Callback.apply_chain(ctx, callbacks, event_step(pos))
+  end
+
+  @doc false
+  @spec state_callback(Context.t(model), state_callback_pos()) :: Context.t(model) when model: var
+  def state_callback(ctx, pos) do
+    if loop?(ctx.transition) do
+      ctx
+    else
+      source = if pos in [:before_enter, :after_enter], do: :to, else: :from
+      state_name = Map.get(ctx.transition, source)
+      state = Map.get(ctx.definition.states, state_name)
+      Callback.apply_chain(ctx, Map.get(state, pos), pos)
+    end
   end
 
   @doc """
@@ -70,7 +91,7 @@ defmodule StateMachine.Transition do
   @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
   def callback(ctx, pos) do
     callbacks = Map.get(ctx.transition, pos)
-    Callback.apply_chain(ctx, callbacks, :"#{pos}_transition")
+    Callback.apply_chain(ctx, callbacks, transition_step(pos))
   end
 
   @doc """
@@ -105,4 +126,10 @@ defmodule StateMachine.Transition do
     state = ctx.definition.state_getter.(ctx)
     %__MODULE__{from: state, to: state}
   end
+
+  defp event_step(:before), do: :before_event
+  defp event_step(:after), do: :after_event
+
+  defp transition_step(:before), do: :before_transition
+  defp transition_step(:after), do: :after_transition
 end

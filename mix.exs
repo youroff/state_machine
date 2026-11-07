@@ -4,7 +4,7 @@ defmodule StateMachine.MixProject do
   def project, do: [
     app: :state_machine,
     version: "0.1.10",
-    elixir: "~> 1.10",
+    elixir: "~> 1.18",
     start_permanent: Mix.env() == :prod,
     elixirc_paths: elixirc_paths(Mix.env),
     description: description(),
@@ -39,7 +39,8 @@ defmodule StateMachine.MixProject do
     {:ecto_sql, "~> 3.0", optional: true},
     {:postgrex, ">= 0.0.0", optional: true},
     {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-    {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+    {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+    {:lynx, git: "https://github.com/josevalim/lynx.git", ref: "e3d8c68281058d21a31aa5ac8e6a7e0b83db4aeb", only: :test}
   ]
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
