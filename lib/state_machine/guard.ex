@@ -28,10 +28,10 @@ defmodule StateMachine.Guard do
   @spec prepare(keyword()) :: list(t(any))
   def prepare(opts) do
     ifs = keyword_splat(opts, :if)
-    |> Enum.map(&%Guard{fun: &1, arity: Function.info(&1)[:arity]})
+    |> Enum.map(&%Guard{fun: &1, arity: StateMachine.Utils.function_arity(&1)})
 
     unlesses = keyword_splat(opts, :unless)
-    |> Enum.map(&%Guard{inverted: true, fun: &1, arity: Function.info(&1)[:arity]})
+    |> Enum.map(&%Guard{inverted: true, fun: &1, arity: StateMachine.Utils.function_arity(&1)})
 
     ifs ++ unlesses
   end

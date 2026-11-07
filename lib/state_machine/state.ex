@@ -35,16 +35,7 @@ defmodule StateMachine.State do
   Private function for running state callbacks.
   """
   @spec callback(Context.t(model), callback_pos()) :: Context.t(model) when model: var
-  def callback(ctx, pos) do
-    if Transition.loop?(ctx.transition) do
-      ctx
-    else
-      source = String.ends_with?(to_string(pos), "_enter") && :to || :from
-      state_name = Map.get(ctx.transition, source)
-      state = ctx.definition.states[state_name]
-      Callback.apply_chain(ctx, Map.get(state, pos), pos)
-    end
-  end
+  defdelegate callback(ctx, pos), to: Transition, as: :state_callback
 
   @doc """
   Default implementation of a state getter.

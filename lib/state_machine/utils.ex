@@ -8,6 +8,12 @@ defmodule StateMachine.Utils do
     end
   end
 
+  @doc false
+  @spec function_arity(function()) :: 0 | 1 | 2
+  def function_arity(fun) when is_function(fun, 0), do: 0
+  def function_arity(fun) when is_function(fun, 1), do: 1
+  def function_arity(fun) when is_function(fun, 2), do: 2
+
   @spec normalize_function(module(), (any -> any) | atom()) :: (any -> any)
   def normalize_function(_, f) when is_function(f, 1) do
     f

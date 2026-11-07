@@ -40,7 +40,7 @@ defmodule StateMachine.Callback do
   """
   @spec apply_callback(Context.t(model), t(model), atom()) :: Context.t(model) when model: var
   def apply_callback(%{status: :init} = ctx, cb, step) do
-    arity = Function.info(cb)[:arity]
+    arity = StateMachine.Utils.function_arity(cb)
     strct = ctx.model.__struct__
     case {apply(cb, Enum.take([ctx.model, ctx], arity)), arity} do
 
